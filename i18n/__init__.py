@@ -23,7 +23,7 @@ def get_locale(lang: str | None = None) -> dict[str, str]:
     """
     if lang is None:
         lang = os.getenv("DEFAULT_LANGUAGE", "en")
-    
+
     return LOCALES.get(lang.lower(), EN_TRANSLATIONS)
 
 
@@ -40,13 +40,13 @@ def _(key: str, lang: str | None = None, **kwargs: Any) -> str:
     """
     translations = get_locale(lang)
     text = translations.get(key, key)
-    
+
     if kwargs:
         try:
             return text.format(**kwargs)
         except KeyError:
             return text
-    
+
     return text
 
 
@@ -61,20 +61,20 @@ def detect_language_from_header(accept_language: str | None) -> str:
     """
     if not accept_language:
         return "en"
-    
+
     # Parse header and look for supported languages
     # Header format: "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7"
     for lang in accept_language.split(","):
         # Remove quality value if present
         lang_code = lang.split(";")[0].strip().lower()
-        
+
         # Check for exact match
         if lang_code in LOCALES:
             return lang_code
-        
+
         # Check for language prefix (e.g., "it-it" -> "it")
         base_code = lang_code.split("-")[0]
         if base_code in LOCALES:
             return base_code
-    
+
     return "en"
