@@ -8,9 +8,10 @@ from typing import Any
 import aiohttp
 import voluptuous as vol
 
-from homeassistant import config_entries
-from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
+# These imports require Home Assistant environment
+from homeassistant import config_entries  # type: ignore
+from homeassistant.core import callback  # type: ignore
+from homeassistant.data_entry_flow import FlowResult  # type: ignore
 
 from .const import CONF_BRIDGE_URL, DOMAIN
 

@@ -9,8 +9,9 @@ from typing import Any
 
 import aiohttp
 
-from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+# These imports require Home Assistant environment
+from homeassistant.core import HomeAssistant  # type: ignore
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator  # type: ignore
 
 from .const import DEFAULT_SCAN_INTERVAL, DOMAIN, EVENT_STATUS_UPDATE
 
