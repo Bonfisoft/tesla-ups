@@ -86,3 +86,13 @@ custom_components/tesla_ups/
 ├── sensor.py           # Sensors (battery %, status, grid state)
 └── strings.json        # UI translations
 ```
+
+## Acknowledgments
+
+This integration relies on several excellent open source projects:
+
+- **[PyPowerwall](https://github.com/jasonacox/pypowerwall)** by Jason Cox - Tesla Powerwall proxy
+- **[NUT UPS Daemon](https://github.com/instantlinux/docker-nut-upsd)** by Rich Braun - UPS monitoring
+- **Home Assistant** - Integration framework
+
+See [ATTRIBUTIONS.md](../ATTRIBUTIONS.md) for complete third-party credits and licenses.
