@@ -22,7 +22,7 @@ def test_determine_status_low_battery():
 
 def test_send_alert_skipped_when_config_missing():
     config = {"smtp_server": "", "smtp_port": 587, "email_user": "", "email_pass": "", "notify_to": ""}
-    sent = bridge.send_alert("Test outage", config)
+    sent = bridge.send_alert("Test outage", config, "en")
     assert sent is False
 
 
@@ -36,7 +36,7 @@ def test_write_nut_status_file(tmp_path):
 
 def test_process_status_sends_alert(monkeypatch, tmp_path):
     monkeypatch.setattr(bridge, "STATUS_FILE", str(tmp_path / "powerwall.dev"))
-    monkeypatch.setattr(bridge, "send_alert", lambda message, config: True)
+    monkeypatch.setattr(bridge, "send_alert", lambda message, config, lang="en": True)
     monkeypatch.setattr(
         bridge,
         "state",
@@ -56,7 +56,7 @@ def test_process_status_sends_alert(monkeypatch, tmp_path):
 
 def test_process_status_clears_notification_on_grid_restore(monkeypatch, tmp_path):
     monkeypatch.setattr(bridge, "STATUS_FILE", str(tmp_path / "powerwall.dev"))
-    monkeypatch.setattr(bridge, "send_alert", lambda message, config: True)
+    monkeypatch.setattr(bridge, "send_alert", lambda message, config, lang="en": True)
     monkeypatch.setattr(
         bridge,
         "state",

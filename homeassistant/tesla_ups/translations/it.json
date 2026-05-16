@@ -1,0 +1,21 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Tesla Powerwall UPS Bridge",
+        "description": "Configura la connessione al tuo Tesla Powerwall UPS Bridge.",
+        "data": {
+          "bridge_url": "URL Bridge"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Connessione al bridge fallita. Controlla l'URL e assicurati che il bridge sia in esecuzione.",
+      "invalid_auth": "Autenticazione non valida",
+      "unknown": "Errore imprevisto"
+    },
+    "abort": {
+      "already_configured": "Dispositivo già configurato"
+    }
+  }
+}

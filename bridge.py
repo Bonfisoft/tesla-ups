@@ -18,9 +18,10 @@ from typing import Any, AsyncGenerator, Dict
 
 import requests
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 
+from i18n import _, detect_language_from_header
 from providers import BatteryProvider, BatteryStatus, load_provider
 from providers import ConfigError
 
@@ -81,7 +82,7 @@ def load_config() -> Dict[str, Any]:
     }
 
 
-def send_alert(message: str, config: Dict[str, Any]) -> bool:
+def send_alert(message: str, config: Dict[str, Any], lang: str = "en") -> bool:
     """Send an email alert using SMTP settings from configuration."""
     if (
         not config["smtp_server"]
@@ -93,7 +94,7 @@ def send_alert(message: str, config: Dict[str, Any]) -> bool:
         return False
 
     msg = MIMEText(message)
-    msg["Subject"] = "UPS Bridge Alert: Grid Outage"
+    msg["Subject"] = _("alert.subject", lang)
     msg["From"] = config["email_user"]
     msg["To"] = config["notify_to"]
 
@@ -154,11 +155,14 @@ def process_status(
     state["grid"] = "SystemGridConnected" if battery_status.grid_connected else "GridDown"
     state["provider"] = provider_name
 
+    # Get language for alerts from environment
+    alert_lang = os.getenv("DEFAULT_LANGUAGE", "en")
+
     new_status, should_notify = determine_status(
         battery_status.grid_connected, battery_status.soe, state["notification_sent"]
     )
     if should_notify and send_alert(
-        f"Grid outage detected! Battery at {battery_status.soe}%", config
+        _("alert.grid_outage", alert_lang, soe=battery_status.soe), config, alert_lang
     ):
         state["notification_sent"] = True
 
@@ -200,21 +204,44 @@ def get_status() -> Dict[str, Any]:
     return state
 
 
+def get_status_display(status: str, lang: str) -> str:
+    """Get translated status label."""
+    if "LB" in status:
+        return _("status.low_battery", lang)
+    elif "OB" in status:
+        return _("status.on_battery", lang)
+    elif "OL" in status:
+        return _("status.online", lang)
+    return _("status.unknown", lang)
+
+
 @app.get("/", response_class=HTMLResponse)
-def dashboard() -> str:
+def dashboard(request: Request, lang: str | None = None) -> str:
     """Render a simple status dashboard for browser access."""
+    # Determine language: query param > Accept-Language header > default
+    if lang is None:
+        accept_language = request.headers.get("accept-language")
+        lang = detect_language_from_header(accept_language)
+    
     color = "green" if state["status"] == "OL" else "red"
     provider_name = state.get("provider", "unknown")
+    status_display = get_status_display(state["status"], lang)
+    
+    # Translate grid state
+    grid_key = "grid.connected" if state["grid"] == "SystemGridConnected" else "grid.down"
+    grid_display = _(grid_key, lang)
+    
     return f"""
     <html>
-        <head><title>UPS Bridge Status</title><meta http-equiv="refresh" content="15"></head>
+        <head><title>{_("dashboard.title", lang)}</title><meta http-equiv="refresh" content="15"></head>
         <body style="font-family:sans-serif; text-align:center; padding-top:50px;">
-            <h1>UPS Bridge Status</h1>
-            <p style="color:gray;">Provider: {provider_name}</p>
-            <div style="font-size:2em; color:{color}; font-weight:bold;">{state['status']}</div>
-            <p>Grid: {state['grid']}</p>
-            <p>Battery: {state['soe']}%</p>
-            <p style="color:gray;">Last Notification: {state['last_notified']}</p>
+            <h1>{_("dashboard.title", lang)}</h1>
+            <p style="color:gray;">{_("dashboard.provider", lang)}: {provider_name}</p>
+            <div style="font-size:2em; color:{color}; font-weight:bold;">{status_display}</div>
+            <p>{_("dashboard.grid", lang)}: {grid_display}</p>
+            <p>{_("dashboard.battery", lang)}: {state['soe']}%</p>
+            <p style="color:gray;">{_("dashboard.last_notification", lang)}: {state['last_notified']}</p>
+            <p style="color:gray; font-size:0.8em;">{_("dashboard.refreshing", lang)}</p>
         </body>
     </html>
     """

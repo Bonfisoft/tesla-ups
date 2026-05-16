@@ -47,8 +47,23 @@ The bridge service supports these environment variables:
 - `EMAIL_USER` - SMTP login user
 - `EMAIL_PASS` - SMTP login password
 - `NOTIFY_TO` - notification recipient email or phone gateway address
+- `DEFAULT_LANGUAGE` - Interface language (`en` or `it`, default: `en`)
 
 Provider-specific settings (such as the Powerwall proxy URL) are configured in `providers.yaml` rather than environment variables.
+
+## Internationalization
+
+The dashboard and email alerts support multiple languages:
+
+- **English** (`en`) - Default
+- **Italian** (`it`)
+
+Access the dashboard in Italian:
+```
+http://bridge-host:8000/?lang=it
+```
+
+Or set your browser's preferred language to Italian. The bridge also respects the `Accept-Language` HTTP header for automatic language detection.
 
 ## Provider Configuration
 
