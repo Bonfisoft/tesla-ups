@@ -1,0 +1,21 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Tesla Powerwall UPS Bridge",
+        "description": "Hana i ka hoʻohui ʻana i kou Tesla Powerwall UPS Bridge.",
+        "data": {
+          "bridge_url": "URL Bridge"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Hāʻule ka hoʻohui ʻana i ka bridge. E ʻoluʻolu e nānā i ka URL a hōʻoia i ka bridge.",
+      "invalid_auth": "Hewa ka ʻōlelo hūnōai",
+      "unknown": "Hewa ʻike ʻole ʻia"
+    },
+    "abort": {
+      "already_configured": "Ua hana ʻia kēia mea"
+    }
+  }
+}

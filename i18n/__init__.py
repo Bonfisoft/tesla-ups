@@ -4,11 +4,15 @@ import os
 from typing import Any
 
 from .en import TRANSLATIONS as EN_TRANSLATIONS
+from .haw import TRANSLATIONS as HAW_TRANSLATIONS
 from .it import TRANSLATIONS as IT_TRANSLATIONS
+from .nv import TRANSLATIONS as NV_TRANSLATIONS
 
 LOCALES = {
     "en": EN_TRANSLATIONS,
+    "haw": HAW_TRANSLATIONS,
     "it": IT_TRANSLATIONS,
+    "nv": NV_TRANSLATIONS,
 }
 
 
@@ -16,7 +20,8 @@ def get_locale(lang: str | None = None) -> dict[str, str]:
     """Get translation dictionary for the specified language.
     
     Args:
-        lang: Language code (en, it). If None, uses environment variable or defaults to 'en'.
+        lang: Language code (en, haw, it, nv). If None, uses environment variable 
+        or defaults to 'en'.
         
     Returns:
         Dictionary of translation keys to translated strings.
@@ -32,7 +37,8 @@ def _(key: str, lang: str | None = None, **kwargs: Any) -> str:
     
     Args:
         key: Translation key
-        lang: Language code (en, it). If None, uses environment variable or defaults to 'en'.
+        lang: Language code (en, haw, it, nv). If None, uses environment variable 
+        or defaults to 'en'.
         **kwargs: Format arguments for the translation string
         
     Returns:

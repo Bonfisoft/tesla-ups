@@ -1,0 +1,21 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Tesla Powerwall UPS Bridge",
+        "description": "Nahasdzáán áłah nidaasdzoh bíchį́į́hgi Tesla Powerwall UPS Bridge.",
+        "data": {
+          "bridge_url": "URL Bridge"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Haneʼ yágháah bíighah. URL chį́į́hígíí áádóó bridge bee haaghandi.",
+      "invalid_auth": "Béésh Łichíiʼii doo yáʼátʼéehgi átʼé",
+      "unknown": "Doo bííghahánígi átʼé"
+    },
+    "abort": {
+      "already_configured": "Tʼáá ałtso áádóólínííh"
+    }
+  }
+}
