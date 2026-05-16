@@ -1,0 +1,49 @@
+services:
+  pypowerwall:
+    image: jasonacox/pypowerwall:latest
+    container_name: pypowerwall
+    restart: always
+    env_file: .env
+    #environment:
+    #  - PW_HOST=192.168.1.100
+    #  - PW_PASSWORD=your_password
+    #  - PW_EMAIL=your_email@example.com
+    #  - PW_TIMEZONE=Australia/Brisbane
+    ports:
+      - "8675:8675"
+
+  nut-upsd:
+    image: instantlinux/nut-upsd:latest
+    container_name: nut-upsd
+    restart: always
+    privileged: true
+    volumes:
+      - ./nut-config:/etc/nut
+      - ups_status:/var/lib/nut/ups
+    ports:
+      - "3493:3493"
+
+  powerwall-bridge:
+    build: .
+    container_name: powerwall-bridge
+    restart: always
+    env_file: .env
+    #environment:
+    #  - PROXY_URL=http://pypowerwall:8675/api/status
+    #  - SMTP_SERVER=smtp.gmail.com
+    #  - SMTP_PORT=587
+    #  - EMAIL_USER=alberto.bonfiglio@gmail.com
+    #  - EMAIL_PASS=your_app_password
+    #  - NOTIFY_TO=alberto.bonfiglio@gmail.com
+    volumes:
+      - ./bridge.py:/app/bridge.py
+      - ./providers:/app/providers
+      - ./providers.yaml:/app/providers.yaml
+      - ups_status:/var/lib/nut/ups
+    ports:
+      - "8000:8000"
+    depends_on:
+      - pypowerwall
+
+volumes:
+  ups_status:

@@ -1,0 +1,4 @@
+.env
+extensions
+__pycache__
+.coverage

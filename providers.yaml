@@ -1,0 +1,4 @@
+provider: powerwall
+config:
+  base_url: http://pypowerwall:8675
+  timeout: 5
