@@ -21,7 +21,15 @@ def test_determine_status_low_battery():
 
 
 def test_send_alert_skipped_when_config_missing():
-    config = {"smtp_server": "", "smtp_port": 587, "email_user": "", "email_pass": "", "notify_to": ""}
+    config = {
+        "smtp_server": "",
+        "smtp_port": 587,
+        "email_user": "",
+        "email_pass": "",
+        "email_token": "",
+        "email_auth_type": "password",
+        "notify_to": "",
+    }
     sent = bridge.send_alert("Test outage", config, "en")
     assert sent is False
 

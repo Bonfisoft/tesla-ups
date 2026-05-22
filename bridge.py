@@ -33,6 +33,7 @@ async def lifespan(fastapi_app: FastAPI):
     threading.Thread(target=background_poller, args=(provider,), daemon=True).start()
     yield
 
+
 app = FastAPI(lifespan=lifespan)
 
 STATUS_FILE = "/var/lib/nut/ups/powerwall.dev"
@@ -73,24 +74,46 @@ def get_env_int(key: str, default: int) -> int:
 
 def load_config() -> Dict[str, Any]:
     """Load runtime configuration from environment variables."""
+    auth_type = get_env("EMAIL_AUTH_TYPE", "password").lower()
     return {
         "smtp_server": get_env("SMTP_SERVER", ""),
         "smtp_port": get_env_int("SMTP_PORT", 587),
         "email_user": get_env("EMAIL_USER", ""),
         "email_pass": get_env("EMAIL_PASS", ""),
+        "email_token": get_env("EMAIL_TOKEN", ""),
+        "email_auth_type": auth_type,
         "notify_to": get_env("NOTIFY_TO", ""),
     }
 
 
+def _oauth2_auth_string(user: str, token: str) -> str:
+    """Build XOAUTH2 authentication string for OAuth 2.0.
+
+    Format: user={user}^Aauth=Bearer {token}^A^A
+    (^A represents ASCII 0x01, SOH character)
+    """
+    auth_string = f"user={user}\x01auth=Bearer {token}\x01\x01"
+    return auth_string
+
+
 def send_alert(message: str, config: Dict[str, Any], lang: str = "en") -> bool:
-    """Send an email alert using SMTP settings from configuration."""
-    if (
-        not config["smtp_server"]
-        or not config["email_user"]
-        or not config["email_pass"]
-        or not config["notify_to"]
-    ):
+    """Send an email alert using SMTP settings from configuration.
+
+    Supports both password-based and OAuth 2.0 authentication.
+    """
+    auth_type = config.get("email_auth_type", "password")
+
+    # Validate required fields based on auth type
+    if not config["smtp_server"] or not config["email_user"] or not config["notify_to"]:
         logger.warning("Missing email configuration; skipping alert: %s", message)
+        return False
+
+    if auth_type == "oauth2" and not config["email_token"]:
+        logger.warning("Missing OAuth 2.0 token; skipping alert")
+        return False
+
+    if auth_type == "password" and not config["email_pass"]:
+        logger.warning("Missing email password; skipping alert")
         return False
 
     msg = MIMEText(message)
@@ -101,11 +124,24 @@ def send_alert(message: str, config: Dict[str, Any], lang: str = "en") -> bool:
     try:
         with smtplib.SMTP(config["smtp_server"], config["smtp_port"]) as server:
             server.starttls()
-            server.login(config["email_user"], config["email_pass"])
+
+            if auth_type == "oauth2":
+                # OAuth 2.0 XOAUTH2 authentication (Gmail, Outlook, etc.)
+                auth_string = _oauth2_auth_string(
+                    config["email_user"], config["email_token"]
+                )
+                server.ehlo()
+                server.docmd("AUTH", f"XOAUTH2 {auth_string}")
+            else:
+                # Password-based authentication (traditional or App Password)
+                server.login(config["email_user"], config["email_pass"])
+
             server.send_message(msg)
         state["last_notified"] = time.strftime("%H:%M:%S")
-        logger.info("Alert sent: %s", message)
+        logger.info("Alert sent via %s: %s", auth_type, message)
         return True
+    except smtplib.SMTPAuthenticationError as exc:
+        logger.error("SMTP authentication failed (%s): %s", auth_type, exc)
     except smtplib.SMTPException as exc:
         logger.warning("Failed to send email alert: %s", exc)
     except (OSError, ValueError) as exc:
@@ -113,7 +149,9 @@ def send_alert(message: str, config: Dict[str, Any], lang: str = "en") -> bool:
     return False
 
 
-def determine_status(grid_connected: bool, soe: float, notified: bool) -> tuple[str, bool]:
+def determine_status(
+    grid_connected: bool, soe: float, notified: bool
+) -> tuple[str, bool]:
     """Determine the UPS status label and whether an outage notification should be sent."""
     if grid_connected:
         return "OL", False
@@ -152,7 +190,9 @@ def process_status(
     prev_status = state["status"]
 
     state["soe"] = battery_status.soe
-    state["grid"] = "SystemGridConnected" if battery_status.grid_connected else "GridDown"
+    state["grid"] = (
+        "SystemGridConnected" if battery_status.grid_connected else "GridDown"
+    )
     state["provider"] = provider_name
 
     # Get language for alerts from environment
@@ -222,25 +262,32 @@ def dashboard(request: Request, lang: str | None = None) -> str:
     if lang is None:
         accept_language = request.headers.get("accept-language")
         lang = detect_language_from_header(accept_language)
-    
+
     color = "green" if state["status"] == "OL" else "red"
     provider_name = state.get("provider", "unknown")
     status_display = get_status_display(state["status"], lang)
-    
+
     # Translate grid state
-    grid_key = "grid.connected" if state["grid"] == "SystemGridConnected" else "grid.down"
+    grid_key = (
+        "grid.connected" if state["grid"] == "SystemGridConnected" else "grid.down"
+    )
     grid_display = _(grid_key, lang)
-    
+
     return f"""
     <html>
-        <head><title>{_("dashboard.title", lang)}</title><meta http-equiv="refresh" content="15"></head>
+        <head>
+            <title>{_("dashboard.title", lang)}</title>
+            <meta http-equiv="refresh" content="15">
+        </head>
         <body style="font-family:sans-serif; text-align:center; padding-top:50px;">
             <h1>{_("dashboard.title", lang)}</h1>
             <p style="color:gray;">{_("dashboard.provider", lang)}: {provider_name}</p>
             <div style="font-size:2em; color:{color}; font-weight:bold;">{status_display}</div>
             <p>{_("dashboard.grid", lang)}: {grid_display}</p>
             <p>{_("dashboard.battery", lang)}: {state['soe']}%</p>
-            <p style="color:gray;">{_("dashboard.last_notification", lang)}: {state['last_notified']}</p>
+            <p style="color:gray;">
+                {_("dashboard.last_notification", lang)}: {state['last_notified']}
+            </p>
             <p style="color:gray; font-size:0.8em;">{_("dashboard.refreshing", lang)}</p>
         </body>
     </html>

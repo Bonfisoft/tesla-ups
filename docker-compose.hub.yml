@@ -1,14 +1,12 @@
+# Docker Compose using pre-built Docker Hub image
+# Copy this file and customize with your .env and providers.yaml
+
 services:
   pypowerwall:
     image: jasonacox/pypowerwall:latest
     container_name: pypowerwall
     restart: always
     env_file: .env
-    #environment:
-    #  - PW_HOST=192.168.1.100
-    #  - PW_PASSWORD=your_password
-    #  - PW_EMAIL=your_email@example.com
-    #  - PW_TIMEZONE=Australia/Brisbane
     ports:
       - "${PYPOWERWALL_PORT:-8675}:8675"
 
@@ -24,21 +22,15 @@ services:
       - "${NUT_UPSD_PORT:-3493}:3493"
 
   powerwall-bridge:
-    build: .
+    # Use pre-built image from Docker Hub instead of building locally
+    image: darthbert/tesla-ups-bridge:latest
+    # Or specific version: darthbert/tesla-ups-bridge:v1.2.3
     container_name: powerwall-bridge
     restart: always
     env_file: .env
-    #environment:
-    #  - PROXY_URL=http://pypowerwall:8675/api/status
-    #  - SMTP_SERVER=smtp.gmail.com
-    #  - SMTP_PORT=587
-    #  - EMAIL_USER=alberto.bonfiglio@gmail.com
-    #  - EMAIL_PASS=your_app_password
-    #  - NOTIFY_TO=alberto.bonfiglio@gmail.com
     volumes:
-      - ./bridge.py:/app/bridge.py
-      - ./providers:/app/providers
-      - ./providers.yaml:/app/providers.yaml
+      # Mount your local configuration files
+      - ./providers.yaml:/app/providers.yaml:ro
       - ups_status:/var/lib/nut/ups
     ports:
       - "${BRIDGE_PORT:-8000}:8000"
