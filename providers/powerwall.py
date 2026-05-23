@@ -29,7 +29,10 @@ class PowerwallProvider(BatteryProvider):
             f"{self._base_url}/api/system_status/soe", timeout=self._timeout
         )
         soe_resp.raise_for_status()
-        soe_data = soe_resp.json()
+        try:
+            soe_data = soe_resp.json()
+        except ValueError as exc:
+            raise ValueError(f"Invalid JSON from SOE endpoint: {soe_resp.text[:200]}") from exc
         if soe_data is None:
             raise ValueError("Empty response from SOE endpoint")
         soe = round(float(soe_data.get("percentage", 0.0)), 1)
@@ -38,7 +41,10 @@ class PowerwallProvider(BatteryProvider):
             f"{self._base_url}/api/system_status/grid_status", timeout=self._timeout
         )
         grid_resp.raise_for_status()
-        grid_data = grid_resp.json()
+        try:
+            grid_data = grid_resp.json()
+        except ValueError as exc:
+            raise ValueError(f"Invalid JSON from grid status endpoint: {grid_resp.text[:200]}") from exc
         if grid_data is None:
             raise ValueError("Empty response from grid status endpoint")
         grid_connected = grid_data.get("grid_status", "") == _GRID_CONNECTED_VALUE

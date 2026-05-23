@@ -1,0 +1,45 @@
+name: Create Release
+
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          # Get the previous tag
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag found, showing all commits"
+            git log --pretty=format:"- %s" HEAD
+          else
+            echo "Showing commits since $PREV_TAG"
+            git log --pretty=format:"- %s" ${PREV_TAG}..HEAD
+          fi
+        shell: bash
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          body: |
+            ## Changes
+            ${{ steps.changelog.outputs.stdout }}
+            
+            ## Docker Image
+            Image: `darthbert/tesla-ups-bridge:${{ github.ref_name }}`
+            
+            ## Installation
+            Update your Portainer stack to use this version tag.
+          draft: false
+          prerelease: false

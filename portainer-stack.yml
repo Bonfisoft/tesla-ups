@@ -1,0 +1,90 @@
+version: "3.8"
+
+# SYNLOGY NAS PATHS:
+# If your Docker directory is on a different volume, update the path:
+# - /volume1/docker/tesla-ups  (Volume 1)
+# - /volume2/docker/tesla-ups  (Volume 2)
+# - /volume3/docker/tesla-ups  (Volume 3)
+
+services:
+  pypowerwall:
+    image: jasonacox/pypowerwall:latest
+    container_name: pypowerwall
+    restart: always
+    environment:
+      - PW_HOST=${PW_HOST}
+      - PW_EMAIL=${PW_EMAIL}
+      - PW_PASSWORD=${PW_PASSWORD}
+    dns:
+      - 192.168.1.35        # Internal dns server IP if needed
+    dns_search:
+      - my.lan              # local domain if any
+    ports:
+      - "${PW_PORT:-8675}:8675"
+
+  nut-upsd:
+    image: instantlinux/nut-upsd:latest
+    container_name: nut-upsd
+    restart: always
+    privileged: true
+    volumes:
+      - /volume1/docker/tesla-ups/nut-config:/etc/nut
+      - ups_status:/var/lib/nut/ups
+    environment:
+      - UPS_NAME=powerwall
+      - UPS_DRIVER=dummy-ups
+    ports:
+      - "${PW_PORT:-3493}:3493"
+    depends_on:
+      powerwall-bridge:
+        condition: service_healthy
+
+  powerwall-bridge:
+    image: darthbert/tesla-ups-bridge:v1.0.1
+    container_name: powerwall-bridge
+    restart: always
+    environment:
+      # Multi-Provider Configuration
+      # Provider 1 (Main House)
+      - PROVIDER_1_TYPE=powerwall
+      - PROVIDER_1_PROXY_URL=http://pypowerwall:8675
+      - PROVIDER_1_TIMEOUT=10
+      - PROVIDER_1_NAME=Main House
+
+      # Provider 2 (Optional - uncomment for multiple Powerwalls)
+      # - PROVIDER_2_TYPE=powerwall
+      # - PROVIDER_2_PROXY_URL=http://pypowerwall2:8675
+      # - PROVIDER_2_NAME=Guest House
+
+      # SMTP / Email Notifications
+      - SMTP_SERVER=${SMTP_SERVER}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - EMAIL_USER=${EMAIL_USER}
+      - EMAIL_PASS=${EMAIL_PASS}
+      - NOTIFY_TO=${NOTIFY_TO}
+
+      # Internationalization
+      - DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-en}
+
+      # Optional: Polling interval in seconds (default: 15)
+      - POLL_INTERVAL=${POLL_INTERVAL:-15}
+
+      # Optional: Bridge web UI port (default: 8000)
+      - BRIDGE_PORT=${BRIDGE_PORT:-8000}
+    volumes:
+      - ups_status:/var/lib/nut/ups
+    ports:
+      - "${BRIDGE_PORT:-8000}:8000"
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      pypowerwall:
+        condition: service_started
+
+volumes:
+  ups_status:
