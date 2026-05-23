@@ -2,6 +2,10 @@ import bridge
 from providers.base import BatteryStatus
 
 
+# ============================================================================
+# Single Provider Status Tests
+# ============================================================================
+
 def test_determine_status_online():
     status, notify = bridge.determine_status(True, 100.0, False)
     assert status == "OL"
@@ -20,19 +24,91 @@ def test_determine_status_low_battery():
     assert notify is True
 
 
+# ============================================================================
+# Multi-Provider Aggregate Status Tests
+# ============================================================================
+
+def test_aggregate_status_all_online():
+    """Test aggregate when all providers are on grid."""
+    provider_statuses = [
+        ("PW1", BatteryStatus(soe=95.0, grid_connected=True)),
+        ("PW2", BatteryStatus(soe=88.0, grid_connected=True)),
+    ]
+    aggregate, min_soe, grid_state, details = bridge.aggregate_status(provider_statuses)
+    assert aggregate == "OL"
+    assert min_soe == 88.0
+    assert grid_state == "SystemGridConnected"
+    assert len(details) == 2
+
+
+def test_aggregate_status_one_on_battery():
+    """Test aggregate when one provider is on battery."""
+    provider_statuses = [
+        ("PW1", BatteryStatus(soe=95.0, grid_connected=True)),
+        ("PW2", BatteryStatus(soe=70.0, grid_connected=False)),
+    ]
+    aggregate, min_soe, grid_state, details = bridge.aggregate_status(provider_statuses)
+    assert aggregate == "OB"  # Not low battery
+    assert min_soe == 70.0
+    assert grid_state == "GridDown"
+
+
+def test_aggregate_status_low_battery():
+    """Test aggregate when any provider has low battery."""
+    provider_statuses = [
+        ("PW1", BatteryStatus(soe=95.0, grid_connected=True)),
+        ("PW2", BatteryStatus(soe=10.0, grid_connected=False)),
+    ]
+    aggregate, min_soe, grid_state, details = bridge.aggregate_status(provider_statuses)
+    assert aggregate == "OB LB"
+    assert min_soe == 10.0
+    assert grid_state == "GridDown"
+
+
+def test_aggregate_status_with_error():
+    """Test aggregate when one provider errors."""
+    provider_statuses = [
+        ("PW1", BatteryStatus(soe=95.0, grid_connected=True)),
+        ("PW2", None),  # Error case
+    ]
+    aggregate, min_soe, grid_state, details = bridge.aggregate_status(provider_statuses)
+    assert aggregate == "OB"  # Error treated as offline
+    assert min_soe == 0.0  # Error counts as 0%
+    assert grid_state == "GridDown"
+    assert len(details) == 2
+    assert details[1]["status"] == "error"
+
+
+def test_aggregate_status_single_provider():
+    """Test aggregate with single provider (backward compatibility)."""
+    provider_statuses = [
+        ("PW1", BatteryStatus(soe=82.0, grid_connected=False)),
+    ]
+    aggregate, min_soe, grid_state, details = bridge.aggregate_status(provider_statuses)
+    assert aggregate == "OB"
+    assert min_soe == 82.0
+    assert grid_state == "GridDown"
+
+
+# ============================================================================
+# Email Alert Tests
+# ============================================================================
+
 def test_send_alert_skipped_when_config_missing():
     config = {
         "smtp_server": "",
         "smtp_port": 587,
         "email_user": "",
         "email_pass": "",
-        "email_token": "",
-        "email_auth_type": "password",
         "notify_to": "",
     }
     sent = bridge.send_alert("Test outage", config, "en")
     assert sent is False
 
+
+# ============================================================================
+# NUT Status File Tests
+# ============================================================================
 
 def test_write_nut_status_file(tmp_path):
     bridge.STATUS_FILE = str(tmp_path / "powerwall.dev")
@@ -42,13 +118,25 @@ def test_write_nut_status_file(tmp_path):
     assert "battery.charge: 12.3" in content
 
 
+# ============================================================================
+# Legacy Process Status Tests (for backward compatibility)
+# ============================================================================
+
 def test_process_status_sends_alert(monkeypatch, tmp_path):
     monkeypatch.setattr(bridge, "STATUS_FILE", str(tmp_path / "powerwall.dev"))
     monkeypatch.setattr(bridge, "send_alert", lambda message, config, lang="en": True)
     monkeypatch.setattr(
         bridge,
         "state",
-        {"status": "OL", "soe": 0.0, "last_notified": "Never", "grid": "Unknown", "provider": "unknown", "notification_sent": False},
+        {
+            "status": "OL",
+            "soe": 0.0,
+            "last_notified": "Never",
+            "grid": "Unknown",
+            "provider": "unknown",
+            "notification_sent": False,
+            "providers": [],
+        },
     )
 
     battery_status = BatteryStatus(soe=82.3, grid_connected=False)
@@ -68,7 +156,15 @@ def test_process_status_clears_notification_on_grid_restore(monkeypatch, tmp_pat
     monkeypatch.setattr(
         bridge,
         "state",
-        {"status": "OB", "soe": 50.0, "last_notified": "10:00:00", "grid": "GridDown", "provider": "Mock Provider", "notification_sent": True},
+        {
+            "status": "OB",
+            "soe": 50.0,
+            "last_notified": "10:00:00",
+            "grid": "GridDown",
+            "provider": "Mock Provider",
+            "notification_sent": True,
+            "providers": [],
+        },
     )
 
     battery_status = BatteryStatus(soe=95.0, grid_connected=True)

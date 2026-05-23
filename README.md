@@ -47,14 +47,13 @@ The bridge service supports these environment variables:
 - `SMTP_SERVER` - SMTP host for email notifications (e.g., `smtp.gmail.com`)
 - `SMTP_PORT` - SMTP port (default: `587`)
 - `EMAIL_USER` - SMTP login user (your email address)
-- `EMAIL_PASS` - SMTP password or [App Password](https://myaccount.google.com/apppasswords) (requires 2-Step Verification)
-- `EMAIL_TOKEN` - OAuth 2.0 access token (for OAuth authentication)
-- `EMAIL_AUTH_TYPE` - Authentication type: `password` (default) or `oauth2`
+- `EMAIL_PASS` - SMTP password or [App Password](https://myaccount.google.com/apppasswords) (requires 2-Step Verification on Google account)
 - `NOTIFY_TO` - Notification recipient email or phone gateway address
 
 ### General Settings
 
 - `DEFAULT_LANGUAGE` - Interface language (`en`, `haw`, `it`, `nv`, default: `en`)
+- `POLL_INTERVAL` - Polling interval in seconds (default: `15`)
 
 ### Port Configuration
 
@@ -73,36 +72,20 @@ BRIDGE_PORT=9000
 
 Provider-specific settings (such as the Powerwall proxy URL) are configured in `providers.yaml` rather than environment variables.
 
-### Email Authentication Options
+### Email Authentication
 
-**Option 1: OAuth 2.0 (Gmail - Required for accounts without 2FA)**
+**Gmail requires App Passwords** (Google disabled "Less Secure Apps"):
 
-Google disabled "Less Secure Apps" access. For Gmail without 2-Step Verification enabled, use OAuth 2.0:
+1. Enable [2-Step Verification](https://myaccount.google.com/signinoptions/two-step-verification) on your Google account
+2. Generate an [App Password](https://myaccount.google.com/apppasswords) (16-character code)
+3. Use the App Password in `EMAIL_PASS`:
+
 ```bash
-EMAIL_AUTH_TYPE=oauth2
-EMAIL_USER=your.email@gmail.com
-EMAIL_TOKEN=ya29.a0AfH6SMB...  # OAuth 2.0 access token
-```
-
-Note: OAuth 2.0 tokens expire after ~1 hour. For production, implement token refresh using `EMAIL_REFRESH_TOKEN`.
-
-**Option 2: App Password (Gmail with 2FA / Outlook / Yahoo)**
-
-For Gmail with 2-Step Verification enabled, generate an [App Password](https://myaccount.google.com/apppasswords):
-```bash
-EMAIL_AUTH_TYPE=password
 EMAIL_USER=your.email@gmail.com
 EMAIL_PASS=xxxx xxxx xxxx xxxx  # 16-char app password
 ```
 
-**Option 3: Regular Password (Other providers)**
-
-For non-Gmail providers that still support password authentication:
-```bash
-EMAIL_AUTH_TYPE=password
-EMAIL_USER=user@example.com
-EMAIL_PASS=your_password
-```
+For other email providers, use your regular SMTP password.
 
 ## Internationalization
 
@@ -289,6 +272,78 @@ pytest -m integration
   - `GET /` — returns the HTML dashboard with expected status fields
 
 All tests use `monkeypatch` and `tmp_path` pytest fixtures; no live Powerwall or SMTP server is required.
+
+## NUT Integration
+
+The bridge writes UPS status to a NUT-compatible file format that can be consumed by the `dummy-ups` driver.
+
+### NUT Configuration Files
+
+Create these files on your host for the NUT container:
+
+**`nut-config/ups.conf`:**
+```ini
+[powerwall]
+    driver = dummy-ups
+    port = /var/lib/nut/ups/powerwall.dev
+    mode = dummy-once
+    desc = "Tesla Powerwall via Bridge"
+```
+
+**`nut-config/upsd.conf`:**
+```
+LISTEN 0.0.0.0 3493
+MAXAGE 30
+```
+
+**`nut-config/upsd.users`:**
+```
+[admin]
+    password = admin
+    upsmon master
+```
+
+### NUT Docker Service
+
+```yaml
+nut-upsd:
+  image: instantlinux/nut-upsd:latest
+  container_name: nut-upsd
+  restart: always
+  privileged: true
+  volumes:
+    - ./nut-config:/etc/nut
+    - ups_status:/var/lib/nut/ups
+  environment:
+    - UPS_NAME=powerwall
+    - UPS_DRIVER=dummy-ups
+  ports:
+    - "3493:3493"
+  depends_on:
+    powerwall-bridge:
+      condition: service_healthy
+```
+
+**Key points:**
+- Use `dummy-ups` driver (reads from status file)
+- Set `UPS_DRIVER=dummy-ups` environment variable
+- Mount shared volume `ups_status` for the status file
+- Use `depends_on` with `condition: service_healthy` to ensure bridge starts first
+
+## Health Checks
+
+The bridge includes a Docker healthcheck:
+
+```yaml
+healthcheck:
+  test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 10s
+```
+
+The bridge also creates an initial NUT status file on startup so the `dummy-ups` driver can start immediately.
 
 ## Improvements and future additions
 

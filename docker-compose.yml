@@ -4,11 +4,6 @@ services:
     container_name: pypowerwall
     restart: always
     env_file: .env
-    #environment:
-    #  - PW_HOST=192.168.1.100
-    #  - PW_PASSWORD=your_password
-    #  - PW_EMAIL=your_email@example.com
-    #  - PW_TIMEZONE=Australia/Brisbane
     ports:
       - "${PYPOWERWALL_PORT:-8675}:8675"
 
@@ -28,22 +23,21 @@ services:
     container_name: powerwall-bridge
     restart: always
     env_file: .env
-    #environment:
-    #  - PROXY_URL=http://pypowerwall:8675/api/status
-    #  - SMTP_SERVER=smtp.gmail.com
-    #  - SMTP_PORT=587
-    #  - EMAIL_USER=alberto.bonfiglio@gmail.com
-    #  - EMAIL_PASS=your_app_password
-    #  - NOTIFY_TO=alberto.bonfiglio@gmail.com
     volumes:
       - ./bridge.py:/app/bridge.py
       - ./providers:/app/providers
-      - ./providers.yaml:/app/providers.yaml
       - ups_status:/var/lib/nut/ups
     ports:
       - "${BRIDGE_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     depends_on:
-      - pypowerwall
+      pypowerwall:
+        condition: service_started
 
 volumes:
   ups_status:

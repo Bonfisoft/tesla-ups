@@ -1,5 +1,5 @@
 # Docker Compose using pre-built Docker Hub image
-# Copy this file and customize with your .env and providers.yaml
+# Uses environment variables for all configuration (no files to mount)
 
 services:
   pypowerwall:
@@ -29,13 +29,18 @@ services:
     restart: always
     env_file: .env
     volumes:
-      # Mount your local configuration files
-      - ./providers.yaml:/app/providers.yaml:ro
       - ups_status:/var/lib/nut/ups
     ports:
       - "${BRIDGE_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
     depends_on:
-      - pypowerwall
+      pypowerwall:
+        condition: service_started
 
 volumes:
   ups_status:

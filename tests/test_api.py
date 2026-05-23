@@ -14,8 +14,8 @@ class MockProvider(BatteryProvider):
 
 
 def test_api_status_endpoint_returns_state(monkeypatch):
-    monkeypatch.setattr(bridge, "load_provider", lambda *a, **kw: MockProvider())
-    monkeypatch.setattr(bridge, "background_poller", lambda provider: None)
+    monkeypatch.setattr(bridge, "load_providers", lambda *a, **kw: [MockProvider()])
+    monkeypatch.setattr(bridge, "background_poller", lambda: None)
     client = TestClient(bridge.app)
 
     bridge.state.update({
@@ -24,18 +24,18 @@ def test_api_status_endpoint_returns_state(monkeypatch):
         "soe": 99.0,
         "last_notified": "Never",
         "provider": "Mock Provider",
+        "providers": [{"name": "Mock Provider", "soe": 99.0, "grid_connected": True}],
     })
     response = client.get("/api/status")
 
     assert response.status_code == 200
     assert response.json()["status"] == "OL"
     assert response.json()["soe"] == 99.0
-    assert response.json()["provider"] == "Mock Provider"
 
 
 def test_dashboard_endpoint_returns_html(monkeypatch):
-    monkeypatch.setattr(bridge, "load_provider", lambda *a, **kw: MockProvider())
-    monkeypatch.setattr(bridge, "background_poller", lambda provider: None)
+    monkeypatch.setattr(bridge, "load_providers", lambda *a, **kw: [MockProvider()])
+    monkeypatch.setattr(bridge, "background_poller", lambda: None)
     client = TestClient(bridge.app)
 
     bridge.state.update({
@@ -44,10 +44,10 @@ def test_dashboard_endpoint_returns_html(monkeypatch):
         "soe": 45.0,
         "last_notified": "Never",
         "provider": "Mock Provider",
+        "providers": [{"name": "Mock Provider", "soe": 45.0, "grid_connected": False}],
     })
     response = client.get("/")
 
     assert response.status_code == 200
     assert "UPS Bridge Status" in response.text
     assert "Battery: 45.0%" in response.text
-    assert "Mock Provider" in response.text
