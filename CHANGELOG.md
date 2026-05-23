@@ -33,6 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - SNMP agent default bridge API URL to use new port 8100
 - Home Assistant config flow default bridge URL to use new port 8100
 - Docker Compose healthcheck URLs to use new port 8100
+- Dockerfile missing nut_server.py copy causing ModuleNotFoundError
+- Dockerfile healthcheck port from 8000 to 8100
 
 ### Removed
 
