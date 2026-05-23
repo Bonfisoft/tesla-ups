@@ -39,6 +39,9 @@ services:
     image: darthbert/tesla-ups-bridge:v1.0.1
     container_name: powerwall-bridge
     restart: always
+    # For SNMP on standard port 161, use host network mode instead of port mapping:
+    # network_mode: host
+    # Then set SNMP_PORT=161 in .env and use NAS IP without port in DSM
     environment:
       # Multi-Provider Configuration
       # Provider 1 (Main House)

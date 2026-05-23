@@ -12,7 +12,11 @@ import urllib.request
 import urllib.error
 from pysnmp.entity import engine, config
 from pysnmp.entity.rfc3413 import cmdrsp, context
-from pysnmp.carrier.asyncore.dgram import udp
+# Handle both pysnmp 4.x and 7.x API differences
+try:
+    from pysnmp.carrier.asyncore.dgram import udp
+except ImportError:
+    from pysnmp.carrier.udp.dgram import udp
 from pysnmp.smi import rfc1902
 
 # Environment settings
