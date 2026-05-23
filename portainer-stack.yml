@@ -12,13 +12,9 @@ services:
     container_name: pypowerwall
     restart: always
     environment:
-      - PW_HOST=${PW_HOST}
-      - PW_EMAIL=${PW_EMAIL}
-      - PW_PASSWORD=${PW_PASSWORD}
-    dns:
-      - 192.168.1.35        # Internal dns server IP if needed
-    dns_search:
-      - my.lan              # local domain if any
+      - "PW_HOST=${PW_HOST}"
+      - "PW_EMAIL=${PW_EMAIL}"
+      - "PW_PASSWORD=${PW_PASSWORD}"
     ports:
       - "${PW_PORT:-8675}:8675"
 
@@ -31,10 +27,10 @@ services:
       - /volume1/docker/tesla-ups/nut-config:/etc/nut
       - ups_status:/var/lib/nut/ups
     environment:
-      - UPS_NAME=powerwall
-      - UPS_DRIVER=dummy-ups
+      - "UPS_NAME=${UPS_NAME:-powerwall}"
+      - "UPS_DRIVER=${UPS_DRIVER:-dummy-ups}"
     ports:
-      - "${PW_PORT:-3493}:3493"
+      - "${NUT_PORT:-3493}:3493"
     depends_on:
       powerwall-bridge:
         condition: service_healthy
@@ -46,36 +42,41 @@ services:
     environment:
       # Multi-Provider Configuration
       # Provider 1 (Main House)
-      - PROVIDER_1_TYPE=powerwall
-      - PROVIDER_1_PROXY_URL=http://pypowerwall:8675
-      - PROVIDER_1_TIMEOUT=10
-      - PROVIDER_1_NAME=Main House
+      - "PROVIDER_1_TYPE=${PROVIDER_1_TYPE:-powerwall}"
+      - "PROVIDER_1_PROXY_URL=${PROVIDER_1_PROXY_URL:-http://pypowerwall:8675}"
+      - "PROVIDER_1_TIMEOUT=${PROVIDER_1_TIMEOUT:-10}"
+      - "PROVIDER_1_NAME=${PROVIDER_1_NAME:-Main House}"
 
-      # Provider 2 (Optional - uncomment for multiple Powerwalls)
-      # - PROVIDER_2_TYPE=powerwall
-      # - PROVIDER_2_PROXY_URL=http://pypowerwall2:8675
-      # - PROVIDER_2_NAME=Guest House
+      # Provider 2 (Optional - uncomment and set in .env for multiple Powerwalls)
+      # - "PROVIDER_2_TYPE=${PROVIDER_2_TYPE:-powerwall}"
+      # - "PROVIDER_2_PROXY_URL=${PROVIDER_2_PROXY_URL}"
+      # - "PROVIDER_2_TIMEOUT=${PROVIDER_2_TIMEOUT:-10}"
+      # - "PROVIDER_2_NAME=${PROVIDER_2_NAME}"
 
       # SMTP / Email Notifications
-      - SMTP_SERVER=${SMTP_SERVER}
-      - SMTP_PORT=${SMTP_PORT:-587}
-      - EMAIL_USER=${EMAIL_USER}
-      - EMAIL_PASS=${EMAIL_PASS}
-      - NOTIFY_TO=${NOTIFY_TO}
+      - "SMTP_SERVER=${SMTP_SERVER}"
+      - "SMTP_PORT=${SMTP_PORT:-587}"
+      - "EMAIL_USER=${EMAIL_USER}"
+      - "EMAIL_PASS=${EMAIL_PASS}"
+      - "NOTIFY_TO=${NOTIFY_TO}"
 
       # Internationalization
-      - DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-en}
+      - "DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-en}"
 
       # Optional: Polling interval in seconds (default: 15)
-      - POLL_INTERVAL=${POLL_INTERVAL:-15}
+      - "POLL_INTERVAL=${POLL_INTERVAL:-15}"
 
-      # Optional: Bridge web UI port (default: 8000)
-      - BRIDGE_PORT=${BRIDGE_PORT:-8000}
+      # SNMP Settings for Synology DSM UPS monitoring
+      - "NUT_HOST=${NUT_HOST:-nut-upsd}"
+      - "NUT_PORT=${NUT_PORT:-3493}"
+      - "NUT_USER=${NUT_USER:-admin}"
+      - "NUT_PASS=${NUT_PASS:-admin}"
+      - "SNMP_COMMUNITY=${SNMP_COMMUNITY:-public}"
     volumes:
       - ups_status:/var/lib/nut/ups
     ports:
       - "${BRIDGE_PORT:-8000}:8000"
-
+      - "${SNMP_PORT:-161}:161/udp"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
       interval: 30s

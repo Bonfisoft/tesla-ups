@@ -1,3 +1,6 @@
+# Docker Compose using pre-built Docker Hub image
+# All configuration via environment variables (no providers.yaml needed)
+
 services:
   pypowerwall:
     image: jasonacox/pypowerwall:latest
@@ -5,7 +8,7 @@ services:
     restart: always
     env_file: .env
     ports:
-      - "${PYPOWERWALL_PORT:-8675}:8675"
+      - "${PW_PORT:-8675}:8675"
 
   nut-upsd:
     image: instantlinux/nut-upsd:latest
@@ -16,19 +19,20 @@ services:
       - ./nut-config:/etc/nut
       - ups_status:/var/lib/nut/ups
     ports:
-      - "${NUT_UPSD_PORT:-3493}:3493"
+      - "${NUT_PORT:-3493}:3493"
 
   powerwall-bridge:
-    build: .
+    # Use pre-built image from Docker Hub instead of building locally
+    image: darthbert/tesla-ups-bridge:latest
+    # Or specific version: darthbert/tesla-ups-bridge:v1.0.3
     container_name: powerwall-bridge
     restart: always
     env_file: .env
     volumes:
-      - ./bridge.py:/app/bridge.py
-      - ./providers:/app/providers
       - ups_status:/var/lib/nut/ups
     ports:
       - "${BRIDGE_PORT:-8000}:8000"
+      - "${SNMP_PORT:-161}:161/udp"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
       interval: 30s

@@ -25,9 +25,10 @@ Powerwall -> pypowerwall proxy -> powerwall-bridge -> NUT status file
 
 - `bridge.py` - main FastAPI application and NUT bridge logic
 - `providers/` - battery provider package (abstract interface + implementations)
-- `providers.yaml` - selects the active provider and passes its settings
+- `nut-snmp/` - SNMP agent for Synology DSM UPS monitoring
+- `nut-config-example/` - example NUT configuration files
 - `Dockerfile` - container image definition for the bridge service
-- `compose.yaml` / `docker-compose.yml` - Docker Compose stack for the full system
+- `docker-compose.yml` / `portainer-stack.yml` - Docker Compose stack for local/Portainer deployment
 - `requirements.txt` - runtime Python dependencies
 - `requirements-dev.txt` - developer/test dependencies
 - `tests/` - unit and integration tests
@@ -59,18 +60,18 @@ The bridge service supports these environment variables:
 
 All service ports can be customized via environment variables:
 
-- `PYPOWERWALL_PORT` - PyPowerwall web UI port (default: `8675`)
-- `NUT_UPSD_PORT` - NUT UPS daemon port (default: `3493`)
+- `PW_PORT` - PyPowerwall web UI port (default: `8675`)
+- `NUT_PORT` - NUT UPS daemon port (default: `3493`)
 - `BRIDGE_PORT` - Tesla UPS Bridge dashboard port (default: `8000`)
+- `SNMP_PORT` - SNMP agent port for Synology DSM (default: `161`)
 
 Example using custom ports:
 ```bash
-PYPOWERWALL_PORT=8080
-NUT_UPSD_PORT=3494
+PW_PORT=8080
+NUT_PORT=3494
 BRIDGE_PORT=9000
+SNMP_PORT=1161
 ```
-
-Provider-specific settings (such as the Powerwall proxy URL) are configured in `providers.yaml` rather than environment variables.
 
 ### Email Authentication
 
@@ -106,21 +107,82 @@ http://bridge-host:8000/?lang=nv
 
 Or set your browser's preferred language. The bridge also respects the `Accept-Language` HTTP header for automatic language detection.
 
-## Provider Configuration
+## SNMP Support for Synology DSM
 
-The active battery provider is selected via `providers.yaml` in the project root:
+The bridge includes a built-in SNMP agent for Synology NAS UPS monitoring integration. This allows DSM to display Powerwall battery status directly in the UPS widget.
 
-```yaml
-provider: powerwall
-config:
-  proxy_url: http://pypowerwall:8675/api/status
-  timeout: 5
+### Architecture
+
+```text
+Powerwall -> pypowerwall -> powerwall-bridge (SNMP agent) -> Synology DSM
+                              ↓
+                         NUT status file
 ```
 
-- **`provider`** — name of the provider module under `providers/`. Currently only `powerwall` is built in.
-- **`config`** — key/value pairs passed as constructor arguments to the provider class.
+### Configuration
 
-At startup the bridge loads this file, instantiates the provider, and runs its `health_check()`. A failed health check logs a warning but does not abort startup.
+Set these environment variables in your `.env` file:
+
+- `SNMP_PORT` - SNMP port (default: `161`)
+- `SNMP_COMMUNITY` - SNMP community string (default: `public`)
+- `NUT_HOST` - NUT server hostname (default: `nut-upsd`)
+- `NUT_PORT` - NUT server port (default: `3493`)
+- `NUT_USER` - NUT username (default: `admin`)
+- `NUT_PASS` - NUT password (default: `admin`)
+
+### Synology DSM Setup
+
+1. **Control Panel → Hardware & Power → UPS**
+2. Select **SNMP** as UPS type
+3. Configure:
+   - **IP address:** Your Synology NAS IP
+   - **Port:** `161`
+   - **Community:** `public` (or your custom `SNMP_COMMUNITY`)
+   - **SNMP Version:** v2c
+
+4. Save and the UPS widget will display Powerwall status
+
+### Security Note
+
+The SNMP agent uses read-only community strings. For production, change `SNMP_COMMUNITY` from the default `public` and restrict access via firewall rules.
+
+## Provider Configuration
+
+Providers are configured via environment variables. The bridge supports multiple Powerwalls via numbered provider variables.
+
+### Single Provider (Legacy)
+
+For a single Powerwall:
+
+```bash
+PROXY_URL=http://pypowerwall:8675
+PROVIDER_TIMEOUT=10
+```
+
+### Multi-Provider Configuration
+
+For multiple Powerwalls, use numbered environment variables:
+
+```bash
+# Provider 1 (Main House)
+PROVIDER_1_TYPE=powerwall
+PROVIDER_1_PROXY_URL=http://pypowerwall:8675
+PROVIDER_1_TIMEOUT=10
+PROVIDER_1_NAME=Main House
+
+# Provider 2 (Guest House)
+PROVIDER_2_TYPE=powerwall
+PROVIDER_2_PROXY_URL=http://pypowerwall2:8675
+PROVIDER_2_TIMEOUT=10
+PROVIDER_2_NAME=Guest House
+```
+
+- **`PROVIDER_N_TYPE`** — provider type (`powerwall` is the only built-in type)
+- **`PROVIDER_N_PROXY_URL`** — base URL of the pypowerwall proxy (e.g., `http://pypowerwall:8675`)
+- **`PROVIDER_N_TIMEOUT`** — connection timeout in seconds (default: `10`)
+- **`PROVIDER_N_NAME`** — optional custom name for display
+
+At startup the bridge loads all configured providers, instantiates them, and runs health checks. A failed health check logs a warning but does not abort startup.
 
 ### Writing a custom provider
 
@@ -130,8 +192,9 @@ At startup the bridge loads this file, instantiates the provider, and runs its `
    from providers.base import BatteryProvider, BatteryStatus
 
    class MyProvider(BatteryProvider):
-       def __init__(self, api_url: str) -> None:
-           self._api_url = api_url
+       def __init__(self, base_url: str, timeout: int = 5) -> None:
+           self._base_url = base_url
+           self._timeout = timeout
 
        @property
        def provider_name(self) -> str:
@@ -151,12 +214,11 @@ At startup the bridge loads this file, instantiates the provider, and runs its `
    }
    ```
 
-3. Update `providers.yaml` to select it:
+3. Configure via environment variables:
 
-   ```yaml
-   provider: myprovider
-   config:
-     api_url: http://mybattery:1234/status
+   ```bash
+   PROVIDER_1_TYPE=myprovider
+   PROVIDER_1_PROXY_URL=http://mybattery:1234
    ```
 
 ## Docker Deployment

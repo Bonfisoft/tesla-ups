@@ -13,12 +13,14 @@ RUN pip install --no-cache-dir -r requirements.txt && \
 COPY bridge.py /app/bridge.py
 COPY i18n/ /app/i18n/
 COPY providers/ /app/providers/
-COPY providers.yaml /app/providers.yaml
+COPY nut-snmp/nut_snmp_agent.py /app/nut_snmp_agent.py
 
 EXPOSE 8000
+EXPOSE 161/udp
 
 # Healthcheck: verify API is responding
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8000/api/status || exit 1
 
-CMD ["python", "bridge.py"]
+# Start both bridge web server and SNMP agent
+CMD ["sh", "-c", "python /app/nut_snmp_agent.py & python /app/bridge.py"]

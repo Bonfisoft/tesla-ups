@@ -1,5 +1,5 @@
-# Docker Compose using pre-built Docker Hub image
-# Uses environment variables for all configuration (no files to mount)
+# Docker Compose for local development
+# Uses local build with live code reloading
 
 services:
   pypowerwall:
@@ -8,7 +8,7 @@ services:
     restart: always
     env_file: .env
     ports:
-      - "${PYPOWERWALL_PORT:-8675}:8675"
+      - "${PW_PORT:-8675}:8675"
 
   nut-upsd:
     image: instantlinux/nut-upsd:latest
@@ -19,19 +19,22 @@ services:
       - ./nut-config:/etc/nut
       - ups_status:/var/lib/nut/ups
     ports:
-      - "${NUT_UPSD_PORT:-3493}:3493"
+      - "${NUT_PORT:-3493}:3493"
 
   powerwall-bridge:
-    # Use pre-built image from Docker Hub instead of building locally
-    image: darthbert/tesla-ups-bridge:latest
-    # Or specific version: darthbert/tesla-ups-bridge:v1.2.3
+    build: .
     container_name: powerwall-bridge
     restart: always
     env_file: .env
     volumes:
+      # Development mounts for live code reloading
+      - ./bridge.py:/app/bridge.py
+      - ./providers:/app/providers
+      - ./nut-snmp:/app/nut-snmp
       - ups_status:/var/lib/nut/ups
     ports:
       - "${BRIDGE_PORT:-8000}:8000"
+      - "${SNMP_PORT:-161}:161/udp"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
       interval: 30s
