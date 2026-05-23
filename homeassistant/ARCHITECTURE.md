@@ -6,7 +6,7 @@ The Tesla Powerwall UPS Bridge Home Assistant integration provides real-time mon
 
 ## System Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                         Home Assistant Instance                             │
 │  ┌─────────────────────────────────────────────────────────────────────┐   │
@@ -61,7 +61,7 @@ The Tesla Powerwall UPS Bridge Home Assistant integration provides real-time mon
 
 ### 1. Configuration Flow (`config_flow.py`)
 
-```
+```text
 User opens HA Settings
          │
          ▼
@@ -90,7 +90,7 @@ User opens HA Settings
 
 ### 2. Data Flow - SSE Mode (Preferred)
 
-```
+```text
 ┌─────────────────┐     ┌─────────────┐     ┌─────────────────┐
 │  Bridge Polls   │────▶│  State      │────▶│  Broadcast to   │
 │  Powerwall      │     │  Update     │     │  SSE Queue      │
@@ -122,7 +122,7 @@ User opens HA Settings
 
 ### 3. Data Flow - Polling Mode (Fallback)
 
-```
+```text
 When SSE fails:
 
 ┌─────────────────┐
@@ -151,7 +151,7 @@ When SSE fails:
 
 ## Class Hierarchy
 
-```
+```text
 homeassistant.helpers.update_coordinator.DataUpdateCoordinator
                               │
                               │ inherits
@@ -195,7 +195,7 @@ homeassistant.helpers.update_coordinator.DataUpdateCoordinator
 ### Sensors (`sensor.py`)
 
 | Entity | Key | Unit | Device Class | State Class | Dynamic Icon |
-|--------|-----|------|--------------|-------------|--------------|
+| -------- | ----- | ------ | -------------- | ------------- | -------------- |
 | Battery Charge | `battery_charge` | % | BATTERY | MEASUREMENT | No |
 | UPS Status | `ups_status` | - | - | - | Yes (plug/battery/alert) |
 | Grid State | `grid_state` | - | - | - | Yes (tower on/off) |
@@ -206,7 +206,7 @@ homeassistant.helpers.update_coordinator.DataUpdateCoordinator
 ### Binary Sensors (`binary_sensor.py`)
 
 | Entity | Key | Device Class | Dynamic Icon |
-|--------|-----|--------------|--------------|
+| -------- | ----- | -------------- | -------------- |
 | On Battery | `on_battery` | POWER | Yes (plug-off/battery) |
 | Low Battery | `low_battery` | BATTERY | Yes (battery/alert) |
 
@@ -214,7 +214,7 @@ homeassistant.helpers.update_coordinator.DataUpdateCoordinator
 
 ### Connection
 
-```
+```text
 GET /api/events HTTP/1.1
 Accept: text/event-stream
 Cache-Control: no-cache
@@ -223,7 +223,7 @@ Connection: keep-alive
 
 ### Event Format
 
-```
+```text
 data: {"event": "status_update", "data": {"status": "OB", "soe": 65.0, ...}, "timestamp": 1234567890}
 
 :data: {"event": "connected", "data": {"status": "OL", "soe": 85.0, ...}}
@@ -235,7 +235,7 @@ data: {"event": "status_update", "data": {"status": "OB", "soe": 65.0, ...}, "ti
 ### Event Types
 
 | Event | Description | Trigger |
-|-------|-------------|---------|
+| ------- | ------------- | --------- |
 | `connected` | Initial state on connection | Client connects |
 | `status_update` | State has changed | Bridge poll cycle |
 
@@ -243,7 +243,7 @@ data: {"event": "status_update", "data": {"status": "OB", "soe": 65.0, ...}, "ti
 
 ### SSE Connection Failures
 
-```
+```text
 ┌─────────────────┐
 │  Connection     │
 │  Attempt        │
@@ -273,7 +273,7 @@ data: {"event": "status_update", "data": {"status": "OB", "soe": 65.0, ...}, "ti
 
 ### Entity Availability
 
-```
+```text
 ┌─────────────────┐
 │  last_update_   │─── Check coordinator
 │  success        │
@@ -294,7 +294,7 @@ data: {"event": "status_update", "data": {"status": "OB", "soe": 65.0, ...}, "ti
 
 ### Setup
 
-```
+```text
 HA Startup / Integration Added
               │
               ▼
@@ -330,7 +330,7 @@ HA Startup / Integration Added
 
 ### Teardown
 
-```
+```text
 HA Shutdown / Integration Removed
               │
               ▼
@@ -360,7 +360,7 @@ HA Shutdown / Integration Removed
 
 ## Device Registry
 
-```
+```text
 Device: Tesla Powerwall UPS Bridge
 ├── Manufacturer: Tesla
 ├── Model: Powerwall

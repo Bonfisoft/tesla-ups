@@ -10,6 +10,9 @@ services:
     ports:
       - "${PW_PORT:-8675}:8675"
 
+  # nut-upsd is OPTIONAL - only needed for REPORTING_MODE=upsd
+  # For REPORTING_MODE=nut (default), the bridge provides native NUT protocol
+  # For REPORTING_MODE=snmp, no NUT server is needed at all
   nut-upsd:
     image: instantlinux/nut-upsd:latest
     container_name: nut-upsd
@@ -20,6 +23,8 @@ services:
       - ups_status:/var/lib/nut/ups
     ports:
       - "${NUT_PORT:-3493}:3493"
+    profiles:
+      - upsd  # Only start with: docker-compose --profile upsd up
 
   powerwall-bridge:
     # Use pre-built image from Docker Hub instead of building locally
@@ -31,10 +36,16 @@ services:
     volumes:
       - ups_status:/var/lib/nut/ups
     ports:
-      - "${BRIDGE_PORT:-8000}:8000"
+      - "${BRIDGE_PORT:-8100}:8100"
+      # Port 3493 only needed for REPORTING_MODE=nut (native NUT server)
+      - "${NUT_PORT:-3493}:3493"
+      # Port 1161 only needed for REPORTING_MODE=snmp or upsd
       - "${SNMP_PORT:-1161}:${SNMP_PORT:-1161}/udp"
+    environment:
+      - REPORTING_MODE=${REPORTING_MODE:-nut}
+      - NUT_SERVER_PORT=3493
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
+      test: ["CMD", "curl", "-f", "http://localhost:8100/api/status"]
       interval: 30s
       timeout: 10s
       retries: 3

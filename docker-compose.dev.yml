@@ -33,10 +33,10 @@ services:
       - ./nut-snmp:/app/nut-snmp
       - ups_status:/var/lib/nut/ups
     ports:
-      - "${BRIDGE_PORT:-8000}:8000"
+      - "${BRIDGE_PORT:-8100}:8100"
       - "${SNMP_PORT:-1161}:${SNMP_PORT:-1161}/udp"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
+      test: ["CMD", "curl", "-f", "http://localhost:8100/api/status"]
       interval: 30s
       timeout: 10s
       retries: 3

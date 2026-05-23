@@ -17,7 +17,7 @@ from .const import CONF_BRIDGE_URL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-DEFAULT_BRIDGE_URL = "http://homeassistant.local:8000"
+DEFAULT_BRIDGE_URL = "http://homeassistant.local:8100"
 
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {

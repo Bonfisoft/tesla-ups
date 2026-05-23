@@ -21,6 +21,7 @@ This custom component integrates the Tesla Powerwall UPS Bridge with Home Assist
 ## Installation
 
 1. Copy the `tesla_ups` folder to your Home Assistant `custom_components` directory:
+
    ```bash
    cp -r homeassistant/tesla_ups /config/custom_components/
    ```
@@ -31,17 +32,17 @@ This custom component integrates the Tesla Powerwall UPS Bridge with Home Assist
 
 4. Search for "Tesla Powerwall UPS Bridge"
 
-5. Enter the bridge URL (e.g., `http://homeassistant.local:8000` or `http://192.168.1.100:8000`)
+5. Enter the bridge URL (e.g., `http://homeassistant.local:8100` or `http://192.168.1.100:8100`)
 
 ## Configuration
 
 The integration is configured entirely through the UI. During setup, you'll need:
 
-- **Bridge URL**: The URL where your Tesla Powerwall UPS Bridge is running (default: `http://homeassistant.local:8000`)
+- **Bridge URL**: The URL where your Tesla Powerwall UPS Bridge is running (default: `http://homeassistant.local:8100`)
 
 ## Architecture
 
-```
+```text
 Tesla Powerwall -> pypowerwall proxy -> bridge.py -> SSE endpoint
                                                     |
                                                     v
@@ -62,6 +63,7 @@ Tesla Powerwall -> pypowerwall proxy -> bridge.py -> SSE endpoint
 ### Entities not updating
 
 Check the Home Assistant logs for connection errors. The integration will:
+
 1. First try to connect via SSE for real-time updates
 2. Fall back to polling every 15 seconds if SSE fails
 3. Show "unavailable" if both methods fail
@@ -69,13 +71,14 @@ Check the Home Assistant logs for connection errors. The integration will:
 ### Bridge not reachable
 
 Ensure:
+
 - The bridge container is running (`docker ps` on the host)
 - The bridge URL is correct and accessible from Home Assistant
-- No firewall rules blocking port 8000 between HA and the bridge
+- No firewall rules blocking port 8100 between HA and the bridge
 
 ## File Structure
 
-```
+```text
 custom_components/tesla_ups/
 ├── __init__.py          # Integration setup and teardown
 ├── binary_sensor.py     # Binary sensors (on battery, low battery)

@@ -116,6 +116,8 @@ def test_write_nut_status_file(tmp_path):
     content = (tmp_path / "powerwall.dev").read_text()
     assert "ups.status: OB LB" in content
     assert "battery.charge: 12.3" in content
+    # Verify temp file is cleaned up after atomic rename
+    assert not (tmp_path / "powerwall.dev.tmp").exists()
 
 
 # ============================================================================

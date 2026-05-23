@@ -10,24 +10,24 @@ The Tesla Powerwall UPS Bridge integration is configured entirely through the Ho
 
 During initial setup (via `Settings > Devices & Services > Add Integration`), the following parameter is required:
 
-| Parameter      | Required | Default                           | Description                              |
-|-----------     |----------|---------                          |-------------                             |
-| **Bridge URL** | Yes      | `http://homeassistant.local:8000` | Full URL to the Tesla UPS Bridge service |
+| Parameter | Required | Default | Description |
+| ----------- | ---------- | --------- | ------------- |
+| **Bridge URL** | Yes | `http://homeassistant.local:8100` | Full URL to the Tesla UPS Bridge service |
 
 ### Bridge URL Formats
 
-| Scenario                       | Example URL                      |
-|----------                      | -------------                    |
-| Local network IP               | `http://192.168.1.100:8000`      |
-| Docker hostname (same network) | `http://powerwall-bridge:8000`   |
-| Home Assistant OS add-on       | `http://ccab4aaf-tesla-ups:8000` |
-| Reverse proxy (HTTPS)          | `https://ups.example.com`        |
-| External domain with port      | `http://ups.example.com:8000`    |
+| Scenario | Example URL |
+| ---------- | ------------- |
+| Local network IP | `http://192.168.1.100:8100` |
+| Docker hostname (same network) | `http://powerwall-bridge:8100` |
+| Home Assistant OS add-on | `http://ccab4aaf-tesla-ups:8100` |
+| Reverse proxy (HTTPS) | `https://ups.example.com` |
+| External domain with port | `http://ups.example.com:8100` |
 
 **URL Requirements:**
 
 - Must include protocol (`http://` or `https://`)
-- Must include port if non-standard (8000 is standard)
+- Must include port if non-standard (8100 is standard)
 - No trailing slash required (will be normalized)
 
 ## Entity Configuration
@@ -37,7 +37,7 @@ During initial setup (via `Settings > Devices & Services > Add Integration`), th
 #### sensor.tesla_ups_battery_charge
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Name** | Battery Charge |
 | **Entity ID** | `sensor.tesla_ups_battery_charge` |
 | **State Class** | measurement |
@@ -50,7 +50,7 @@ During initial setup (via `Settings > Devices & Services > Add Integration`), th
 #### sensor.tesla_ups_ups_status
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Name** | UPS Status |
 | **Entity ID** | `sensor.tesla_ups_ups_status` |
 | **Device Class** | None |
@@ -59,7 +59,7 @@ During initial setup (via `Settings > Devices & Services > Add Integration`), th
 **State Values:**
 
 | Value | Meaning | Icon |
-|-------|---------|------|
+| ------- | --------- | ------ |
 | `OL` | On Line (grid power) | `mdi:power-plug` |
 | `OB` | On Battery (outage) | `mdi:battery` |
 | `OB LB` | On Battery Low (< 15%) | `mdi:battery-alert` |
@@ -68,7 +68,7 @@ During initial setup (via `Settings > Devices & Services > Add Integration`), th
 #### sensor.tesla_ups_grid_state
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Name** | Grid State |
 | **Entity ID** | `sensor.tesla_ups_grid_state` |
 | **Icon** | Dynamic (see below) |
@@ -76,7 +76,7 @@ During initial setup (via `Settings > Devices & Services > Add Integration`), th
 **State Values:**
 
 | Value | Meaning | Icon |
-|-------|---------|------|
+| ------- | --------- | ------ |
 | `SystemGridConnected` | Grid connected | `mdi:transmission-tower` |
 | `GridDown` | Grid outage | `mdi:transmission-tower-off` |
 | `Unknown` | State unknown | `mdi:help-circle` |
@@ -84,7 +84,7 @@ During initial setup (via `Settings > Devices & Services > Add Integration`), th
 #### sensor.tesla_ups_last_notification
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Name** | Last Notification |
 | **Entity ID** | `sensor.tesla_ups_last_notification` |
 | **Icon** | `mdi:email-send` |
@@ -96,7 +96,7 @@ During initial setup (via `Settings > Devices & Services > Add Integration`), th
 #### sensor.tesla_ups_provider
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Name** | Provider |
 | **Entity ID** | `sensor.tesla_ups_provider` |
 | **Icon** | `mdi:information` |
@@ -107,7 +107,7 @@ During initial setup (via `Settings > Devices & Services > Add Integration`), th
 #### sensor.tesla_ups_last_update
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Name** | Last Update |
 | **Entity ID** | `sensor.tesla_ups_last_update` |
 | **Icon** | `mdi:clock-outline` |
@@ -120,7 +120,7 @@ During initial setup (via `Settings > Devices & Services > Add Integration`), th
 #### binary_sensor.tesla_ups_on_battery
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Name** | On Battery |
 | **Entity ID** | `binary_sensor.tesla_ups_on_battery` |
 | **Device Class** | power |
@@ -137,7 +137,7 @@ During initial setup (via `Settings > Devices & Services > Add Integration`), th
 #### binary_sensor.tesla_ups_low_battery
 
 | Attribute | Value |
-|-----------|-------|
+| ----------- | ------- |
 | **Name** | Low Battery |
 | **Entity ID** | `binary_sensor.tesla_ups_low_battery` |
 | **Device Class** | battery |
@@ -156,7 +156,7 @@ During initial setup (via `Settings > Devices & Services > Add Integration`), th
 The integration creates a single device with the following properties:
 
 | Property | Value |
-|----------|-------|
+| ---------- | ------- |
 | **Device Name** | Tesla Powerwall UPS Bridge |
 | **Manufacturer** | Tesla |
 | **Model** | Powerwall |
@@ -187,7 +187,7 @@ The integration uses two methods to receive data:
 The coordinator tracks connection state:
 
 | Status | Meaning | Update Method |
-|--------|---------|---------------|
+| -------- | --------- | --------------- |
 | `connected` | SSE active | Real-time SSE |
 | `polling` | SSE failed, using REST | 15s polling |
 | `disconnected` | Cannot reach bridge | Entities unavailable |
@@ -343,18 +343,18 @@ To monitor multiple Powerwalls:
 
 1. Add first bridge:
 
-   ```
+   ```text
    Settings > Devices & Services > Add Integration
    > Tesla Powerwall UPS Bridge
-   > URL: http://bridge1:8000
+   > URL: http://bridge1:8100
    ```
 
 2. Add second bridge:
 
-   ```
+   ```text
    Settings > Devices & Services > Add Integration
    > Tesla Powerwall UPS Bridge
-   > URL: http://bridge2:8000
+   > URL: http://bridge2:8100
    ```
 
 Each creates separate devices with prefixed entities.
@@ -367,13 +367,13 @@ Test from Home Assistant container:
 
 ```bash
 # Test REST endpoint
-curl -s http://<bridge-url>:8000/api/status | jq
+curl -s http://<bridge-url>:8100/api/status | jq
 
 # Test SSE endpoint (should stream events)
-curl -N http://<bridge-url>:8000/api/events
+curl -N http://<bridge-url>:8100/api/events
 
 # Check bridge health
-curl -s http://<bridge-url>:8000/api/status | jq '.provider'
+curl -s http://<bridge-url>:8100/api/status | jq '.provider'
 ```
 
 ### Check Entity State Attributes
@@ -403,7 +403,7 @@ logger:
 
 Then check logs:
 
-```
+```text
 Settings > System > Logs > Load Full Home Assistant Log
 ```
 
@@ -429,7 +429,7 @@ To update the bridge URL:
 
 1. Remove the integration:
 
-   ```
+   ```text
    Settings > Devices & Services > Tesla Powerwall UPS Bridge
    > Three dots > Delete
    ```
@@ -439,7 +439,7 @@ To update the bridge URL:
 ## Configuration Limits
 
 | Limit | Value |
-|-------|-------|
+| ------- | ------- |
 | Max bridges per HA instance | Unlimited (unique URLs) |
 | Update frequency (SSE) | Real-time (as fast as bridge polls) |
 | Update frequency (polling) | 15 seconds (fixed) |
@@ -450,7 +450,7 @@ To update the bridge URL:
 
 ### Network Security
 
-- Bridge runs on port 8000 by default
+- Bridge runs on port 8100 by default
 - No authentication on bridge API (designed for internal networks)
 - Use firewall rules to restrict access if needed
 - For external access, use reverse proxy with HTTPS
@@ -466,7 +466,7 @@ To update the bridge URL:
 ### Bridge Endpoints Used
 
 | Endpoint | Method | Purpose |
-|----------|--------|---------|
+| ---------- | -------- | --------- |
 | `/api/status` | GET | Initial data fetch, fallback polling |
 | `/api/events` | GET | Server-Sent Events stream |
 

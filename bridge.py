@@ -24,31 +24,35 @@ from fastapi.responses import HTMLResponse, StreamingResponse
 from i18n import _, detect_language_from_header
 from providers import BatteryProvider, BatteryStatus, load_providers
 from providers import ConfigError
+from nut_server import NUTServer
 
 # Global list of loaded providers
 providers_list: list[BatteryProvider] = []
+
+# Global NUT server instance (when running in native NUT mode)
+nut_server: NUTServer | None = None
 
 
 @asynccontextmanager
 async def lifespan(_fastapi_app: FastAPI):
     """Initialize battery providers and start the background polling thread."""
-    global providers_list
+    global providers_list, nut_server
     providers_list = load_providers()
 
-    # Create initial NUT status file so NUT dummy-ups driver can start
-    try:
-        write_nut_status_file("OL", 100.0)
-        logger.info("Created initial NUT status file: %s", STATUS_FILE)
-    except OSError as exc:
-        logger.warning("Failed to create initial NUT status file: %s", exc)
+    # Start reporting services based on REPORTING_MODE
+    nut_server = start_reporting_services()
 
     threading.Thread(target=background_poller, daemon=True).start()
     yield
 
+    # Cleanup
+    if nut_server:
+        nut_server.stop()
+
 
 app = FastAPI(lifespan=lifespan)
 
-STATUS_FILE = "/var/lib/nut/ups/powerwall.dev"
+STATUS_FILE = os.getenv("STATUS_FILE", "/var/lib/nut/ups/powerwall.dev")
 POLL_INTERVAL_SECONDS = 15
 LOW_BATTERY_THRESHOLD = 15.0
 
@@ -97,6 +101,72 @@ def load_config() -> Dict[str, Any]:
     }
 
 
+def start_reporting_services() -> NUTServer | None:
+    """Start reporting services based on REPORTING_MODE environment variable.
+
+    Modes (mutually exclusive):
+        - 'nut': Run native NUT protocol server only (default)
+        - 'snmp': Run SNMP agent only
+        - 'upsd': Write NUT files for external nut-upsd container only
+
+    Returns:
+        NUTServer instance if started, None otherwise
+    """
+    mode = get_env("REPORTING_MODE", "nut").lower()
+    server: NUTServer | None = None
+
+    logger.info("Starting reporting services in mode: %s", mode)
+
+    if mode == "nut":
+        # Start native NUT protocol server only
+        try:
+            nut_port = get_env_int("NUT_SERVER_PORT", 3493)
+            server = NUTServer(host="0.0.0.0", port=nut_port)
+            server.start()
+            logger.info("Native NUT server started on port %d", nut_port)
+        except OSError as exc:
+            logger.error("Failed to start NUT server: %s", exc)
+
+    if mode == "snmp":
+        # Start SNMP agent as subprocess (background process)
+        import subprocess
+        import sys
+        try:
+            subprocess.Popen(
+                [sys.executable, "/app/nut_snmp_agent.py"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True
+            )
+            snmp_port = get_env_int("SNMP_PORT", 1161)
+            logger.info("SNMP agent started on port %d", snmp_port)
+        except OSError as exc:
+            logger.error("Failed to start SNMP agent: %s", exc)
+
+    if mode == "upsd":
+        # In upsd mode, only write NUT files for external nut-upsd container
+        # No SNMP, no native NUT server - just file output
+        try:
+            write_nut_status_file("OL", 100.0)
+            logger.info("Created initial NUT status file for upsd mode: %s", STATUS_FILE)
+        except OSError as exc:
+            logger.warning("Failed to create initial NUT status file: %s", exc)
+
+    if mode not in ("nut", "snmp", "upsd"):
+        logger.warning("Unknown REPORTING_MODE '%s', using 'nut'", mode)
+        # Fall back to nut (native NUT protocol)
+        return start_reporting_services_for_mode("nut")
+
+    return server
+
+
+def start_reporting_services_for_mode(mode: str) -> NUTServer | None:
+    """Helper to start services for a specific mode (used for fallback)."""
+    import os
+    os.environ["REPORTING_MODE"] = mode
+    return start_reporting_services()
+
+
 def send_alert(message: str, config: Dict[str, Any], lang: str = "en") -> bool:
     """Send an email alert using SMTP settings from configuration."""
     if not config["smtp_server"] or not config["email_user"] or not config["notify_to"]:
@@ -142,11 +212,18 @@ def determine_status(
 
 
 def write_nut_status_file(status: str, soe: float) -> None:
-    """Write the UPS state file in NUT format for the UPS daemon to read."""
+    """Write the UPS state file atomically in NUT format for the UPS daemon to read.
+
+    Uses temp file + atomic rename to prevent mid-write collisions.
+    """
     os.makedirs(os.path.dirname(STATUS_FILE), exist_ok=True)
-    with open(STATUS_FILE, "w", encoding="utf-8") as handle:
+    temp_file = f"{STATUS_FILE}.tmp"
+    with open(temp_file, "w", encoding="utf-8") as handle:
         handle.write(f"ups.status: {status}\n")
         handle.write(f"battery.charge: {soe}\n")
+        handle.flush()
+        os.fsync(handle.fileno())  # Ensure data hits disk before rename
+    os.replace(temp_file, STATUS_FILE)  # Atomic rename
 
 
 def broadcast_event(event_type: str, data: Dict[str, Any]) -> None:
@@ -460,4 +537,4 @@ async def events_endpoint() -> StreamingResponse:
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8100)

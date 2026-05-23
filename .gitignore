@@ -1,5 +1,30 @@
+# Environment variables
 .env
-extensions
+
+# Python
 __pycache__
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# Testing
 .coverage
 .pytest_cache
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Project-specific
+extensions/
+nut-config/
+settings.json
+*.code-workspace
+
+# AI/IDE metadata
+.gemini/

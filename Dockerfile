@@ -15,12 +15,18 @@ COPY i18n/ /app/i18n/
 COPY providers/ /app/providers/
 COPY nut-snmp/nut_snmp_agent.py /app/nut_snmp_agent.py
 
-EXPOSE 8000
-EXPOSE 161/udp
+EXPOSE 8100
+EXPOSE 3493
+EXPOSE 1161/udp
+
+# Environment variables:
+# REPORTING_MODE=nut|snmp|upsd (default: nut)
+# NUT_SERVER_PORT - NUT protocol server port (default: 3493)
+# SNMP_PORT - SNMP agent port (default: 1161)
 
 # Healthcheck: verify API is responding
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8000/api/status || exit 1
 
-# Start both bridge web server and SNMP agent
-CMD ["sh", "-c", "python /app/nut_snmp_agent.py & python /app/bridge.py"]
+# Start bridge (handles REPORTING_MODE internally)
+CMD ["python", "/app/bridge.py"]

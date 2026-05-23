@@ -24,13 +24,11 @@ This project builds upon the excellent work of several open source projects and 
 
 ### Core Dependencies
 
-- **aiohttp** - Apache 2.0 License - Async HTTP client/server framework
-- **pydantic-settings** - MIT License - Settings management using Pydantic
-- **Jinja2** - BSD License - Template engine for dashboard rendering
 - **fastapi** - MIT License - Web framework for the dashboard API
 - **uvicorn** - BSD License - ASGI server
-- **aiosmtplib** - MIT License - Async SMTP client
-- **voluptuous** - BSD License - Data validation library
+- **requests** - Apache 2.0 License - HTTP library for API calls
+- **PyYAML** - MIT License - YAML configuration parsing
+- **pysnmp** - BSD License - SNMP protocol library (for Synology DSM integration)
 
 ## Acknowledgments
 

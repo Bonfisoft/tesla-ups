@@ -18,6 +18,9 @@ services:
     ports:
       - "${PW_PORT:-8675}:8675"
 
+  # nut-upsd is OPTIONAL - only needed for REPORTING_MODE=upsd
+  # For REPORTING_MODE=nut (default), the bridge provides native NUT protocol
+  # For REPORTING_MODE=snmp, no NUT server is needed at all
   nut-upsd:
     image: instantlinux/nut-upsd:latest
     container_name: nut-upsd
@@ -31,6 +34,8 @@ services:
       - "UPS_DRIVER=${UPS_DRIVER:-dummy-ups}"
     ports:
       - "${NUT_PORT:-3493}:3493"
+    profiles:
+      - upsd  # Only start with: docker-compose --profile upsd up
     depends_on:
       powerwall-bridge:
         condition: service_healthy
@@ -43,6 +48,10 @@ services:
     # network_mode: host
     # Then set SNMP_PORT=161 in .env and use NAS IP without port in DSM
     environment:
+      # Reporting Mode: nut (default), snmp, or upsd
+      - "REPORTING_MODE=${REPORTING_MODE:-nut}"
+      - "NUT_SERVER_PORT=${NUT_SERVER_PORT:-3493}"
+
       # Multi-Provider Configuration
       # Provider 1 (Main House)
       - "PROVIDER_1_TYPE=${PROVIDER_1_TYPE:-powerwall}"
@@ -70,18 +79,18 @@ services:
       - "POLL_INTERVAL=${POLL_INTERVAL:-15}"
 
       # SNMP Settings for Synology DSM UPS monitoring
-      - "NUT_HOST=${NUT_HOST:-nut-upsd}"
-      - "NUT_PORT=${NUT_PORT:-3493}"
-      - "NUT_USER=${NUT_USER:-admin}"
-      - "NUT_PASS=${NUT_PASS:-admin}"
       - "SNMP_COMMUNITY=${SNMP_COMMUNITY:-public}"
+      - "SNMP_PORT=${SNMP_PORT:-1161}"
     volumes:
       - ups_status:/var/lib/nut/ups
     ports:
-      - "${BRIDGE_PORT:-8000}:8000"
+      - "${BRIDGE_PORT:-8100}:8100"
+      # Port 3493 only needed for REPORTING_MODE=nut (native NUT server)
+      - "${NUT_PORT:-3493}:3493"
+      # Port 1161 only needed for REPORTING_MODE=snmp or upsd
       - "${SNMP_PORT:-1161}:${SNMP_PORT:-1161}/udp"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
+      test: ["CMD", "curl", "-f", "http://localhost:8100/api/status"]
       interval: 30s
       timeout: 10s
       retries: 3

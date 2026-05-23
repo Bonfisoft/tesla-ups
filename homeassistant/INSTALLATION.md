@@ -6,7 +6,7 @@ Before installing the Home Assistant integration, ensure you have:
 
 1. **Home Assistant** version 2023.7.0 or later (Core, Container, or OS)
 2. **Tesla Powerwall UPS Bridge** running and accessible from Home Assistant
-3. **Network connectivity** between Home Assistant and the bridge (port 8000)
+3. **Network connectivity** between Home Assistant and the bridge (port 8100)
 
 ## Quick Start
 
@@ -16,7 +16,7 @@ Before installing the integration, confirm your bridge is accessible:
 
 ```bash
 # From Home Assistant container/host
-curl http://<bridge-ip>:8000/api/status
+curl http://<bridge-ip>:8100/api/status
 ```
 
 Expected response:
@@ -102,8 +102,8 @@ cd tesla_ups
 
 4. **Enter configuration:**
    - **Bridge URL**: The URL where your bridge is running
-     - Local network: `http://192.168.1.100:8000`
-     - Docker internal: `http://powerwall-bridge:8000`
+     - Local network: `http://192.168.1.100:8100`
+     - Docker internal: `http://powerwall-bridge:8100`
      - With reverse proxy: `https://ups-bridge.yourdomain.com`
 
 5. **Submit** - The integration will test the connection
@@ -165,20 +165,20 @@ services:
     networks:
       - ups_network
     ports:
-      - "8000:8000"
+      - "8100:8100"
 
 networks:
   ups_network:
     driver: bridge
 ```
 
-**Bridge URL for HA:** `http://powerwall-bridge:8000`
+**Bridge URL for HA:** `http://powerwall-bridge:8100`
 
 ### Option 2: External Bridge
 
 If bridge is on another host:
 
-**Bridge URL for HA:** `http://<bridge-host-ip>:8000`
+**Bridge URL for HA:** `http://<bridge-host-ip>:8100`
 
 ## Troubleshooting
 
@@ -222,7 +222,7 @@ If bridge is on another host:
 1. **Verify bridge URL:**
 
    ```bash
-   curl http://<bridge-url>:8000/api/status
+   curl http://<bridge-url>:8100/api/status
    ```
 
 2. **Check network connectivity:**
@@ -230,10 +230,10 @@ If bridge is on another host:
    ```bash
    # From HA container
    ping <bridge-ip>
-   nc -zv <bridge-ip> 8000
+   nc -zv <bridge-ip> 8100
    ```
 
-3. **Firewall rules:** Ensure port 8000 is open
+3. **Firewall rules:** Ensure port 8100 is open
 
 4. **Docker network:** If both in Docker, use service name, not IP
 
@@ -252,7 +252,7 @@ If bridge is on another host:
 2. **Verify SSE endpoint:**
 
    ```bash
-   curl -N http://<bridge-url>:8000/api/events
+   curl -N http://<bridge-url>:8100/api/events
    ```
 
 3. **Restart integration:**
