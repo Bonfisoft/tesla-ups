@@ -63,14 +63,14 @@ All service ports can be customized via environment variables:
 - `PW_PORT` - PyPowerwall web UI port (default: `8675`)
 - `NUT_PORT` - NUT UPS daemon port (default: `3493`)
 - `BRIDGE_PORT` - Tesla UPS Bridge dashboard port (default: `8000`)
-- `SNMP_PORT` - SNMP agent port for Synology DSM (default: `161`)
+- `SNMP_PORT` - SNMP agent port for Synology DSM (default: `1161`, use 161 only if host SNMP is disabled)
 
 Example using custom ports:
 ```bash
 PW_PORT=8080
 NUT_PORT=3494
 BRIDGE_PORT=9000
-SNMP_PORT=1161
+SNMP_PORT=1161  # Use 1161 to avoid conflict with host SNMP daemon
 ```
 
 ### Email Authentication
@@ -123,7 +123,7 @@ Powerwall -> pypowerwall -> powerwall-bridge (SNMP agent) -> Synology DSM
 
 Set these environment variables in your `.env` file:
 
-- `SNMP_PORT` - SNMP port (default: `161`)
+- `SNMP_PORT` - SNMP port (default: `1161`, change to `161` only if host SNMP is disabled)
 - `SNMP_COMMUNITY` - SNMP community string (default: `public`)
 - `NUT_HOST` - NUT server hostname (default: `nut-upsd`)
 - `NUT_PORT` - NUT server port (default: `3493`)
@@ -133,14 +133,27 @@ Set these environment variables in your `.env` file:
 ### Synology DSM Setup
 
 1. **Control Panel → Hardware & Power → UPS**
-2. Select **SNMP** as UPS type
+2. Select **SNMP UPS** as UPS type
 3. Configure:
-   - **IP address:** Your Synology NAS IP
-   - **Port:** `161`
+   - **IP address:** Your Docker host IP (e.g., `192.168.1.34`)
+   - **Port:** `1161` (or your custom `SNMP_PORT`)
+   - **SNMP MIB:** `auto` or `ietf` (RFC 1628 standard MIB)
+   - **SNMP version:** `v2c`
    - **Community:** `public` (or your custom `SNMP_COMMUNITY`)
-   - **SNMP Version:** v2c
 
 4. Save and the UPS widget will display Powerwall status
+
+**Troubleshooting:**
+- If you get "Cannot connect to the network", check that:
+  - The bridge container is running: `docker ps | grep powerwall-bridge`
+  - Port 1161 is not blocked by firewall
+  - You're using the Docker **host** IP, not container IP
+
+**Note:** To use standard SNMP port 161, disable the host's SNMP daemon:
+```bash
+sudo systemctl stop snmpd
+sudo systemctl disable snmpd
+```
 
 ### Security Note
 

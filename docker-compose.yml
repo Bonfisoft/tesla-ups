@@ -32,7 +32,7 @@ services:
       - ups_status:/var/lib/nut/ups
     ports:
       - "${BRIDGE_PORT:-8000}:8000"
-      - "${SNMP_PORT:-161}:161/udp"
+      - "${SNMP_PORT:-1161}:${SNMP_PORT:-1161}/udp"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
       interval: 30s
