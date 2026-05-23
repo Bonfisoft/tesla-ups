@@ -41,7 +41,7 @@ services:
         condition: service_healthy
 
   powerwall-bridge:
-    image: darthbert/tesla-ups-bridge:v1.0.1
+    image: darthbert/tesla-ups-bridge:latest
     container_name: powerwall-bridge
     restart: always
     # For SNMP on standard port 161, use host network mode instead of port mapping:

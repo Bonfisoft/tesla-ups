@@ -11,6 +11,7 @@ RUN pip install --no-cache-dir -r requirements.txt && \
 
 # Copy application code
 COPY bridge.py /app/bridge.py
+COPY nut_server.py /app/nut_server.py
 COPY i18n/ /app/i18n/
 COPY providers/ /app/providers/
 COPY nut-snmp/nut_snmp_agent.py /app/nut_snmp_agent.py
@@ -26,7 +27,7 @@ EXPOSE 1161/udp
 
 # Healthcheck: verify API is responding
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8000/api/status || exit 1
+    CMD curl -f http://localhost:8100/api/status || exit 1
 
 # Start bridge (handles REPORTING_MODE internally)
 CMD ["python", "/app/bridge.py"]
