@@ -21,6 +21,9 @@ TRANSLATIONS = {
 
     # Email alerts
     "alert.grid_outage": "Ua ʻike ʻia ka hāʻule ʻana o ka pūnaewele! Paka uila ma {soe}%",
+    "alert.grid_restored": "Ua hoʻomaʻemaʻe ʻia ka mana pūnaewele! Paka uila ma {soe}%",
+    "alert.battery_warning": "Wāwahi paka uila! Paka uila ma {soe}%",
+    "alert.battery_critical": "Paka uila pāpā! Paka uila ma {soe}% - hoʻokuʻu kāhuli",
     "alert.subject": "Ke Aʻo ʻŌlelo UPS Bridge: Hāʻule ka Pūnaewele",
 
     # Error messages

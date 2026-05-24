@@ -18,6 +18,9 @@ TRANSLATIONS = {
     "grid.down": "Interrotta",
     # Email alerts
     "alert.grid_outage": "Rilevata interruzione di rete! Batteria al {soe}%",
+    "alert.grid_restored": "Alimentazione di rete ripristinata! Batteria al {soe}%",
+    "alert.battery_warning": "Avviso batteria! Batteria al {soe}%",
+    "alert.battery_critical": "Batteria critica! Batteria al {soe}% - avvio spegnimento",
     "alert.subject": "Allarme UPS Bridge: Interruzione di Rete",
 
     # Error messages

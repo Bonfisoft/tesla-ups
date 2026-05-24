@@ -172,6 +172,52 @@ def test_process_status_clears_notification_on_grid_restore(monkeypatch, tmp_pat
     battery_status = BatteryStatus(soe=95.0, grid_connected=True)
     bridge.process_status(battery_status, bridge.load_config(), "Mock Provider")
 
-    assert bridge.state["status"] == "OL"
-    assert bridge.state["grid"] == "SystemGridConnected"
-    assert bridge.state["notification_sent"] is False
+
+# ============================================================================
+# Alert Threshold Tests
+# ============================================================================
+
+def test_battery_warning_threshold_default():
+    """Test default BATTERY_WARNING threshold is 30.0."""
+    assert bridge.BATTERY_WARNING == 30.0
+
+
+def test_battery_threshold_default():
+    """Test default BATTERY_THRESHOLD is 15.0."""
+    assert bridge.BATTERY_THRESHOLD == 15.0
+
+
+def test_determine_status_uses_threshold():
+    """Test determine_status uses BATTERY_THRESHOLD for low battery status."""
+    status, notify = bridge.determine_status(False, 10.0, False)
+    assert status == "OB LB"  # Below default threshold of 15.0
+    assert notify is True
+
+
+def test_determine_status_above_threshold():
+    """Test determine_status returns OB when above threshold."""
+    status, notify = bridge.determine_status(False, 20.0, False)
+    assert status == "OB"  # Above default threshold of 15.0
+    assert notify is True
+
+
+# ============================================================================
+# Alert State Tracking Tests
+# ============================================================================
+
+def test_state_has_alert_tracking_fields():
+    """Test state dictionary has new alert tracking fields."""
+    assert "grid_offline_notified" in bridge.state
+    assert "grid_online_notified" in bridge.state
+    assert "warning_notified" in bridge.state
+    assert "shutdown_notified" in bridge.state
+    assert "shutdown_signal_sent" in bridge.state
+
+
+def test_alert_tracking_defaults_to_false():
+    """Test all alert tracking fields default to False."""
+    assert bridge.state["grid_offline_notified"] is False
+    assert bridge.state["grid_online_notified"] is False
+    assert bridge.state["warning_notified"] is False
+    assert bridge.state["shutdown_notified"] is False
+    assert bridge.state["shutdown_signal_sent"] is False

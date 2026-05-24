@@ -74,6 +74,9 @@ class NUTProtocolHandler(socketserver.StreamRequestHandler):
         handler = handlers.get(cmd, self._cmd_unknown)
         try:
             handler(args)
+        except ConnectionError:
+            # Client logout - not an error
+            pass
         except Exception as e:
             logger.error("Error handling command '%s': %s", cmd, e)
             self._send_response(f"ERR UNKNOWN\n")
@@ -87,12 +90,27 @@ class NUTProtocolHandler(socketserver.StreamRequestHandler):
         """Get current UPS state from bridge module."""
         # Import here to avoid circular dependency at module load
         import bridge
+        status = bridge.state.get('status', 'OL')
+        soe = bridge.state.get('soe', 100.0)
+
+        # Calculate battery runtime (rough estimate: 5% = 1 hour for Powerwall)
+        runtime_minutes = int(soe * 12) if soe > 0 else 0
+
         return {
-            'ups.status': bridge.state.get('status', 'OL'),
-            'battery.charge': str(bridge.state.get('soe', 100.0)),
+            'ups.status': status,
+            'battery.charge': str(soe),
+            'battery.runtime': str(runtime_minutes),
+            'battery.type': 'LiIon',
             'ups.model': 'Tesla Powerwall',
             'ups.mfr': 'Tesla',
+            'device.model': 'Tesla Powerwall',
+            'device.mfr': 'Tesla',
             'device.type': 'ups',
+            'ups.load': '0',
+            'input.voltage': '240',
+            'output.voltage': '240',
+            'ups.delay.shutdown': '120',
+            'ups.delay.start': '60',
         }
 
     # Command handlers

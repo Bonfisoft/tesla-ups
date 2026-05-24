@@ -21,6 +21,9 @@ TRANSLATIONS = {
 
     # Email alerts
     "alert.grid_outage": "Bee atʼiis yágháah názíní! Atʼiis bee béésh {soe}% gólííʼ",
+    "alert.grid_restored": "Bee atʼiis hoʼoolʼéél! Atʼiis bee béésh {soe}% gólííʼ",
+    "alert.battery_warning": "Atʼiis bee béésh wóóníín! Atʼiis bee béésh {soe}% gólííʼ",
+    "alert.battery_critical": "Atʼiis bee béésh pāpā! Atʼiis bee béésh {soe}% gólííʼ - yikʼą́ą́ʼ nizhóní",
     "alert.subject": "UPS Bridge Átʼéégis: Bee Atʼiis Yágháah",
 
     # Error messages

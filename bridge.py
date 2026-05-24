@@ -26,6 +26,8 @@ from providers import BatteryProvider, BatteryStatus, load_providers
 from providers import ConfigError
 from nut_server import NUTServer
 
+__version__ = "1.2.0"
+
 # Global list of loaded providers
 providers_list: list[BatteryProvider] = []
 
@@ -33,10 +35,37 @@ providers_list: list[BatteryProvider] = []
 nut_server: NUTServer | None = None
 
 
+def print_startup_banner():
+    """Print startup banner with configuration information."""
+    reporting_mode = os.getenv("REPORTING_MODE", "nut").upper()
+    nut_port = os.getenv("NUT_SERVER_PORT", "3493")
+    snmp_port = os.getenv("SNMP_PORT", "1161")
+    bridge_port = os.getenv("BRIDGE_PORT", "8100")
+    status_file = os.getenv("STATUS_FILE", "/var/lib/nut/ups/powerwall.dev")
+
+    logging.info("=" * 60)
+    logging.info("Tesla Powerwall UPS Bridge v%s", __version__)
+    logging.info("=" * 60)
+    logging.info("Configuration:")
+    logging.info("  Reporting Mode: %s", reporting_mode)
+    logging.info("  Bridge Port: %s", bridge_port)
+    logging.info("  NUT Server Port: %s (native mode only)", nut_port)
+    logging.info("  SNMP Port: %s (SNMP mode only)", snmp_port)
+    logging.info("  Status File: %s", status_file)
+    logging.info("  Poll Interval: %s seconds", POLL_INTERVAL_SECONDS)
+    logging.info("  Battery Warning Level: %s%%", BATTERY_WARNING)
+    logging.info("  Battery Critical Level: %s%%", BATTERY_THRESHOLD)
+    logging.info("=" * 60)
+
+
 @asynccontextmanager
 async def lifespan(_fastapi_app: FastAPI):
     """Initialize battery providers and start the background polling thread."""
     global providers_list, nut_server
+
+    # Print startup banner
+    print_startup_banner()
+
     providers_list = load_providers()
 
     # Start reporting services based on REPORTING_MODE
@@ -54,7 +83,8 @@ app = FastAPI(lifespan=lifespan)
 
 STATUS_FILE = os.getenv("STATUS_FILE", "/var/lib/nut/ups/powerwall.dev")
 POLL_INTERVAL_SECONDS = 15
-LOW_BATTERY_THRESHOLD = 15.0
+BATTERY_WARNING = float(os.getenv("BATTERY_WARNING", "30.0"))  # Warning level (%)
+BATTERY_THRESHOLD = float(os.getenv("BATTERY_THRESHOLD", "15.0"))  # Critical/shutdown level (%)
 
 state: Dict[str, Any] = {
     "status": "OL",
@@ -63,6 +93,11 @@ state: Dict[str, Any] = {
     "grid": "Unknown",
     "provider": "unknown",
     "notification_sent": False,
+    "grid_offline_notified": False,  # Track if we've notified about grid going offline
+    "grid_online_notified": False,  # Track if we've notified about grid coming back online
+    "warning_notified": False,  # Track if we've notified about battery warning level
+    "shutdown_notified": False,  # Track if we've notified about battery critical level
+    "shutdown_signal_sent": False,  # Track if we've sent shutdown signal to clients
     "providers": [],  # List of individual provider statuses
 }
 
@@ -206,7 +241,7 @@ def determine_status(
     if grid_connected:
         return "OL", False
 
-    status = "OB LB" if soe <= LOW_BATTERY_THRESHOLD else "OB"
+    status = "OB LB" if soe <= BATTERY_THRESHOLD else "OB"
     should_notify = not notified
     return status, should_notify
 
@@ -334,7 +369,7 @@ def aggregate_status(
         if not status.grid_connected:
             all_on_grid = False
 
-        if status.soe < LOW_BATTERY_THRESHOLD:
+        if status.soe < BATTERY_THRESHOLD:
             any_low_battery = True
 
         min_soe = min(min_soe, status.soe)
@@ -392,20 +427,60 @@ def background_poller() -> None:
                 not any_on_battery, min_soe, state["notification_sent"]
             )
 
-            # Send notification if needed
-            if should_notify:
+            # Grid offline notification (with battery status)
+            if any_on_battery and not state["grid_offline_notified"]:
                 alert_lang = os.getenv("DEFAULT_LANGUAGE", "en")
                 if send_alert(
                     _("alert.grid_outage", alert_lang, soe=min_soe), config, alert_lang
                 ):
-                    state["notification_sent"] = True
+                    state["grid_offline_notified"] = True
                     state["last_notified"] = time.strftime("%H:%M:%S")
 
-            # Reset notification when grid is restored
-            # Reset notification when grid is restored
-            is_all_on_grid = grid_state == "SystemGridConnected"
-            if is_all_on_grid:
-                state["notification_sent"] = False
+            # Grid online notification (with battery status)
+            if not any_on_battery and state["grid_offline_notified"] and not state["grid_online_notified"]:
+                alert_lang = os.getenv("DEFAULT_LANGUAGE", "en")
+                if send_alert(
+                    _("alert.grid_restored", alert_lang, soe=min_soe), config, alert_lang
+                ):
+                    state["grid_online_notified"] = True
+                    state["last_notified"] = time.strftime("%H:%M:%S")
+
+            # Reset grid notifications when grid state changes
+            if not any_on_battery and state["grid_offline_notified"]:
+                state["grid_offline_notified"] = False
+            if any_on_battery and state["grid_online_notified"]:
+                state["grid_online_notified"] = False
+
+            # Battery warning level notification
+            if any_on_battery and min_soe <= BATTERY_WARNING and not state["warning_notified"]:
+                alert_lang = os.getenv("DEFAULT_LANGUAGE", "en")
+                if send_alert(
+                    _("alert.battery_warning", alert_lang, soe=min_soe), config, alert_lang
+                ):
+                    state["warning_notified"] = True
+                    state["last_notified"] = time.strftime("%H:%M:%S")
+
+            # Battery critical level notification and shutdown signal
+            if any_on_battery and min_soe <= BATTERY_THRESHOLD and not state["shutdown_notified"]:
+                alert_lang = os.getenv("DEFAULT_LANGUAGE", "en")
+                if send_alert(
+                    _("alert.battery_critical", alert_lang, soe=min_soe), config, alert_lang
+                ):
+                    state["shutdown_notified"] = True
+                    state["last_notified"] = time.strftime("%H:%M:%S")
+
+                # Send shutdown signal to NUT clients
+                if not state["shutdown_signal_sent"]:
+                    logger.warning("Battery at critical level (%.1f%%), sending shutdown signal", min_soe)
+                    # Update NUT status to indicate imminent shutdown
+                    write_nut_status_file("OB LB FSD", min_soe)  # FSD = Forced Shutdown
+                    state["shutdown_signal_sent"] = True
+
+            # Reset battery notifications when grid is restored
+            if not any_on_battery:
+                state["warning_notified"] = False
+                state["shutdown_notified"] = False
+                state["shutdown_signal_sent"] = False
 
             state["status"] = new_status
 

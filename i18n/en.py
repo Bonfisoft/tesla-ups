@@ -21,6 +21,9 @@ TRANSLATIONS = {
     
     # Email alerts
     "alert.grid_outage": "Grid outage detected! Battery at {soe}%",
+    "alert.grid_restored": "Grid power restored! Battery at {soe}%",
+    "alert.battery_warning": "Battery warning! Battery at {soe}%",
+    "alert.battery_critical": "Battery critical! Battery at {soe}% - initiating shutdown",
     "alert.subject": "UPS Bridge Alert: Grid Outage",
     
     # Error messages

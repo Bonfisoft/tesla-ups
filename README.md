@@ -91,6 +91,17 @@ The bridge service supports these environment variables:
 - `EMAIL_PASS` - SMTP password or [App Password](https://myaccount.google.com/apppasswords) (requires 2-Step Verification on Google account)
 - `NOTIFY_TO` - Notification recipient email or phone gateway address
 
+### Alert Thresholds
+
+- `BATTERY_WARNING` - Battery warning level in percent (default: `30.0`). Sends alert when battery drops to this level while on grid power.
+- `BATTERY_THRESHOLD` - Battery critical/shutdown level in percent (default: `15.0`). Sends alert and shutdown signal when battery drops to this level while on grid power.
+
+**Alert Behavior:**
+- **Grid Offline**: Sends alert when grid goes offline (includes current battery status)
+- **Grid Restored**: Sends alert when grid comes back online (includes current battery status)
+- **Battery Warning**: Sends alert when battery reaches `BATTERY_WARNING` level (default: 30%)
+- **Battery Critical**: Sends alert and NUT shutdown signal when battery reaches `BATTERY_THRESHOLD` level (default: 15%)
+
 ### General Settings
 
 - `DEFAULT_LANGUAGE` - Interface language (`en`, `haw`, `it`, `nv`, default: `en`)
