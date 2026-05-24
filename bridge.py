@@ -26,7 +26,7 @@ from providers import BatteryProvider, BatteryStatus, load_providers
 from providers import ConfigError
 from nut_server import NUTServer
 
-__version__ = "1.2.3"
+__version__ = "1.2.4"
 
 # Global list of loaded providers
 providers_list: list[BatteryProvider] = []
