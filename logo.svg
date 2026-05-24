@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="500" height="500">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3c72" />
+      <stop offset="100%" stop-color="#2a5298" />
+    </linearGradient>
+    <linearGradient id="batteryGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2ecc71" />
+      <stop offset="100%" stop-color="#27ae60" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-opacity="0.3" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="500" height="500" rx="100" ry="100" fill="url(#bg)" />
+
+  <!-- Shield (Protection / UPS) -->
+  <path d="M 250 50 L 400 90 L 400 270 C 400 380 250 450 250 450 C 250 450 100 380 100 270 L 100 90 Z" fill="none" stroke="#ffffff" stroke-width="16" stroke-linejoin="round" opacity="0.9" filter="url(#shadow)" />
+
+  <!-- Battery Top -->
+  <rect x="225" y="125" width="50" height="20" rx="4" ry="4" fill="#ffffff" filter="url(#shadow)" />
+
+  <!-- Battery Body Outline -->
+  <rect x="180" y="145" width="140" height="200" rx="12" ry="12" fill="none" stroke="#ffffff" stroke-width="16" filter="url(#shadow)" />
+
+  <!-- Battery Charge Level -->
+  <rect x="198" y="215" width="104" height="112" rx="4" ry="4" fill="url(#batteryGrad)" />
+
+  <!-- Lightning Bolt (Power) -->
+  <path d="M 265 160 L 210 250 L 245 250 L 230 320 L 285 220 L 250 220 Z" fill="#f1c40f" filter="url(#shadow)" />
+
+
+</svg>

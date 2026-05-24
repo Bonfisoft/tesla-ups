@@ -1,5 +1,18 @@
 # Tesla Powerwall UPS Bridge
 
+<p align="center">
+  <img src="logo.svg" alt="Tesla Powerwall UPS Bridge Logo" width="200"/>
+</p>
+
+<p align="center">
+  <a href="https://github.com/darthbert/tesla-ups/actions/workflows/test.yml">
+    <img src="https://github.com/darthbert/tesla-ups/actions/workflows/test.yml/badge.svg" alt="Tests">
+  </a>
+  <a href="https://codecov.io/gh/darthbert/tesla-ups">
+    <img src="https://codecov.io/gh/darthbert/tesla-ups/branch/main/graph/badge.svg" alt="Coverage">
+  </a>
+</p>
+
 This project monitors a Tesla Powerwall through a local proxy and reports grid outages to a Network UPS Tools (NUT) server. When a Powerwall outage is detected, it writes NUT-compatible UPS status data and can send a notification email.
 
 ## Scope
