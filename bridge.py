@@ -83,7 +83,6 @@ async def lifespan(_fastapi_app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 STATUS_FILE = os.getenv("STATUS_FILE", "/var/lib/nut/ups/powerwall.dev")
-POLL_INTERVAL_SECONDS = 15
 BATTERY_WARNING = float(os.getenv("BATTERY_WARNING", "30.0"))  # Warning level (%)
 BATTERY_THRESHOLD = float(os.getenv("BATTERY_THRESHOLD", "15.0"))  # Critical/shutdown level (%)
 
@@ -198,7 +197,6 @@ def start_reporting_services() -> NUTServer | None:
 
 def start_reporting_services_for_mode(mode: str) -> NUTServer | None:
     """Helper to start services for a specific mode (used for fallback)."""
-    import os
     os.environ["REPORTING_MODE"] = mode
     return start_reporting_services()
 
@@ -391,7 +389,6 @@ def aggregate_status(
 
 def background_poller() -> None:
     """Run the battery provider poll loop for all providers in a background thread."""
-    global providers_list
     config = load_config()
 
     while True:
@@ -409,7 +406,7 @@ def background_poller() -> None:
                 provider_statuses.append((display_name, status))
 
             # Aggregate status across all providers
-            aggregate, min_soe, grid_state, provider_details = aggregate_status(
+            _, min_soe, grid_state, provider_details = aggregate_status(
                 provider_statuses
             )
 
@@ -424,7 +421,7 @@ def background_poller() -> None:
 
             # Determine status for notifications
             any_on_battery = grid_state == "GridDown"
-            new_status, should_notify = determine_status(
+            new_status, _ = determine_status(
                 not any_on_battery, min_soe, state["notification_sent"]
             )
 
@@ -613,5 +610,7 @@ async def events_endpoint() -> StreamingResponse:
 
 if __name__ == "__main__":
     import uvicorn
+    import os
 
-    uvicorn.run(app, host="0.0.0.0", port=8100)
+    bridge_port = int(os.getenv("BRIDGE_PORT", "8100"))
+    uvicorn.run(app, host="0.0.0.0", port=bridge_port)

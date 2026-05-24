@@ -36,7 +36,7 @@ services:
     volumes:
       - ups_status:/var/lib/nut/ups
     ports:
-      - "${BRIDGE_PORT:-8100}:8100"
+      - "${BRIDGE_PORT:-8100}:${BRIDGE_PORT:-8100}"
       # Port 3493 only needed for REPORTING_MODE=nut (native NUT server)
       - "${NUT_PORT:-3493}:3493"
       # Port 1161 only needed for REPORTING_MODE=snmp or upsd
@@ -45,7 +45,7 @@ services:
       - REPORTING_MODE=${REPORTING_MODE:-nut}
       - NUT_SERVER_PORT=3493
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8100/api/status"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
       interval: 30s
       timeout: 10s
       retries: 3
