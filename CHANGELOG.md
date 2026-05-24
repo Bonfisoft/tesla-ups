@@ -7,7 +7,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.2.0] - 2026-05-24
+## [1.2.2] - 2026-05-24
+
+### Added
+
+- Configurable battery alert thresholds: BATTERY_WARNING (default: 30%) and BATTERY_THRESHOLD (default: 15%)
+- Grid offline notification with current battery status
+- Grid restored notification with current battery status
+- Battery warning level alert when battery reaches BATTERY_WARNING
+- Battery critical level alert and NUT shutdown signal when battery reaches BATTERY_THRESHOLD
+- NUT shutdown signal mechanism (FSD status) for client systems
+- Unit tests for alert threshold functionality
+
+### Changed
+
+- Alert behavior to include battery status in all notifications
+- State tracking to prevent duplicate alerts for same event
+
+### Documentation Updates
+
+- Updated README with alert threshold environment variables and behavior
+
+## [1.2.1] - 2026-05-24
 
 ### Added
 
@@ -17,12 +38,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - .gitignore entries for IDE files, config files, and AI metadata
 - Startup banner displaying version and configuration on startup
 - Additional NUT variables for Synology DSM compatibility (battery.runtime, battery.type, device.model, etc.)
-- Configurable battery alert thresholds: BATTERY_WARNING (default: 30%) and BATTERY_THRESHOLD (default: 15%)
-- Grid offline notification with current battery status
-- Grid restored notification with current battery status
-- Battery warning level alert when battery reaches BATTERY_WARNING
-- Battery critical level alert and NUT shutdown signal when battery reaches BATTERY_THRESHOLD
-- NUT shutdown signal mechanism (FSD status) for client systems
 
 ### Changed
 
@@ -43,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker Compose healthcheck URLs to use new port 8100
 - Dockerfile missing nut_server.py copy causing ModuleNotFoundError
 - Dockerfile healthcheck port from 8000 to 8100
+- NUT server LOGOUT command logging as error (now silently handled as normal disconnection)
 
 ### Removed
 
