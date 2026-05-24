@@ -42,6 +42,7 @@ def print_startup_banner():
     snmp_port = os.getenv("SNMP_PORT", "1161")
     bridge_port = os.getenv("BRIDGE_PORT", "8100")
     status_file = os.getenv("STATUS_FILE", "/var/lib/nut/ups/powerwall.dev")
+    poll_interval = os.getenv("POLL_INTERVAL", "15")
 
     logging.info("=" * 60)
     logging.info("Tesla Powerwall UPS Bridge v%s", __version__)
@@ -52,7 +53,7 @@ def print_startup_banner():
     logging.info("  NUT Server Port: %s (native mode only)", nut_port)
     logging.info("  SNMP Port: %s (SNMP mode only)", snmp_port)
     logging.info("  Status File: %s", status_file)
-    logging.info("  Poll Interval: %s seconds", POLL_INTERVAL_SECONDS)
+    logging.info("  Poll Interval: %s seconds", poll_interval)
     logging.info("  Battery Warning Level: %s%%", BATTERY_WARNING)
     logging.info("  Battery Critical Level: %s%%", BATTERY_THRESHOLD)
     logging.info("=" * 60)
@@ -428,7 +429,8 @@ def background_poller() -> None:
             )
 
             # Grid offline notification (with battery status)
-            if any_on_battery and not state["grid_offline_notified"]:
+            # Skip alerts if SOE is 0.0 (indicates data error, not actual battery level)
+            if any_on_battery and not state["grid_offline_notified"] and min_soe > 0.0:
                 alert_lang = os.getenv("DEFAULT_LANGUAGE", "en")
                 if send_alert(
                     _("alert.grid_outage", alert_lang, soe=min_soe), config, alert_lang
@@ -437,7 +439,7 @@ def background_poller() -> None:
                     state["last_notified"] = time.strftime("%H:%M:%S")
 
             # Grid online notification (with battery status)
-            if not any_on_battery and state["grid_offline_notified"] and not state["grid_online_notified"]:
+            if not any_on_battery and state["grid_offline_notified"] and not state["grid_online_notified"] and min_soe > 0.0:
                 alert_lang = os.getenv("DEFAULT_LANGUAGE", "en")
                 if send_alert(
                     _("alert.grid_restored", alert_lang, soe=min_soe), config, alert_lang
@@ -452,7 +454,7 @@ def background_poller() -> None:
                 state["grid_online_notified"] = False
 
             # Battery warning level notification
-            if any_on_battery and min_soe <= BATTERY_WARNING and not state["warning_notified"]:
+            if any_on_battery and min_soe <= BATTERY_WARNING and not state["warning_notified"] and min_soe > 0.0:
                 alert_lang = os.getenv("DEFAULT_LANGUAGE", "en")
                 if send_alert(
                     _("alert.battery_warning", alert_lang, soe=min_soe), config, alert_lang
@@ -461,7 +463,7 @@ def background_poller() -> None:
                     state["last_notified"] = time.strftime("%H:%M:%S")
 
             # Battery critical level notification and shutdown signal
-            if any_on_battery and min_soe <= BATTERY_THRESHOLD and not state["shutdown_notified"]:
+            if any_on_battery and min_soe <= BATTERY_THRESHOLD and not state["shutdown_notified"] and min_soe > 0.0:
                 alert_lang = os.getenv("DEFAULT_LANGUAGE", "en")
                 if send_alert(
                     _("alert.battery_critical", alert_lang, soe=min_soe), config, alert_lang
