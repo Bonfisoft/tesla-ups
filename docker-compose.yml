@@ -9,6 +9,9 @@ services:
     env_file: .env
     ports:
       - "${PW_PORT:-8675}:8675"
+    dns:
+      - 192.168.1.1
+      - 8.8.8.8
 
   # nut-upsd is OPTIONAL - only needed for REPORTING_MODE=upsd
   # For REPORTING_MODE=nut (default), the bridge provides native NUT protocol
@@ -39,8 +42,6 @@ services:
       - "${BRIDGE_PORT:-8100}:${BRIDGE_PORT:-8100}"
       # Port 3493 only needed for REPORTING_MODE=nut (native NUT server)
       - "${NUT_PORT:-3493}:3493"
-      # Port 1161 only needed for REPORTING_MODE=snmp or upsd
-      - "${SNMP_PORT:-1161}:${SNMP_PORT:-1161}/udp"
     environment:
       - REPORTING_MODE=${REPORTING_MODE:-nut}
       - NUT_SERVER_PORT=3493
@@ -53,6 +54,32 @@ services:
     depends_on:
       pypowerwall:
         condition: service_started
+
+  # SNMP variant - only started with: docker-compose --profile snmp up
+  powerwall-bridge-snmp:
+    image: darthbert/tesla-ups-bridge:latest
+    container_name: powerwall-bridge
+    restart: always
+    env_file: .env
+    volumes:
+      - ups_status:/var/lib/nut/ups
+    ports:
+      - "${BRIDGE_PORT:-8100}:${BRIDGE_PORT:-8100}"
+      # Port 1161 only needed for REPORTING_MODE=snmp or upsd
+      - "${SNMP_PORT:-1161}:${SNMP_PORT:-1161}/udp"
+    environment:
+      - REPORTING_MODE=${REPORTING_MODE:-snmp}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      pypowerwall:
+        condition: service_started
+    profiles:
+      - snmp
 
 volumes:
   ups_status:

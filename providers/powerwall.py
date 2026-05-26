@@ -10,9 +10,8 @@ _GRID_CONNECTED_VALUE = "SystemGridConnected"
 class PowerwallProvider(BatteryProvider):
     """Fetches battery state from a pypowerwall proxy HTTP endpoint.
 
-    Uses two dedicated endpoints:
-      - ``<base_url>/api/system_status/soe``          → battery percentage
-      - ``<base_url>/api/system_status/grid_status``  → grid connection state
+    Uses the pypowerwall system_status endpoint:
+      - ``<base_url>/api/system_status`` → contains both battery energy and grid state
     """
 
     def __init__(self, base_url: str, timeout: int = 5) -> None:
@@ -25,37 +24,35 @@ class PowerwallProvider(BatteryProvider):
 
     def fetch_status(self) -> BatteryStatus:
         """Fetch SOE and grid status from the proxy and return a BatteryStatus."""
-        soe_resp = requests.get(
-            f"{self._base_url}/api/system_status/soe", timeout=self._timeout
+        resp = requests.get(
+            f"{self._base_url}/api/system_status", timeout=self._timeout
         )
-        soe_resp.raise_for_status()
+        resp.raise_for_status()
         try:
-            soe_data = soe_resp.json()
+            data = resp.json()
         except ValueError as exc:
-            raise ValueError(f"Invalid JSON from SOE endpoint: {soe_resp.text[:200]}") from exc
-        if soe_data is None:
-            raise ValueError("Empty response from SOE endpoint")
-        soe = round(float(soe_data.get("percentage", 0.0)), 1)
+            raise ValueError(f"Invalid JSON from system_status endpoint: {resp.text[:200]}") from exc
+        if data is None:
+            raise ValueError("Empty response from system_status endpoint")
 
-        grid_resp = requests.get(
-            f"{self._base_url}/api/system_status/grid_status", timeout=self._timeout
-        )
-        grid_resp.raise_for_status()
-        try:
-            grid_data = grid_resp.json()
-        except ValueError as exc:
-            raise ValueError(f"Invalid JSON from grid status endpoint: {grid_resp.text[:200]}") from exc
-        if grid_data is None:
-            raise ValueError("Empty response from grid status endpoint")
-        grid_connected = grid_data.get("grid_status", "") == _GRID_CONNECTED_VALUE
+        # Calculate SOE from energy values
+        energy_remaining = data.get("nominal_energy_remaining", 0)
+        full_pack_energy = data.get("nominal_full_pack_energy", 1)
+        if full_pack_energy > 0:
+            soe = round((energy_remaining / full_pack_energy) * 100, 1)
+        else:
+            soe = 0.0
+
+        # Get grid status
+        grid_connected = data.get("system_island_state", "") == _GRID_CONNECTED_VALUE
 
         return BatteryStatus(soe=soe, grid_connected=grid_connected)
 
     def health_check(self) -> bool:
-        """Return True if the SOE endpoint responds successfully."""
+        """Return True if the system_status endpoint responds successfully."""
         try:
             response = requests.get(
-                f"{self._base_url}/api/system_status/soe", timeout=self._timeout
+                f"{self._base_url}/api/system_status", timeout=self._timeout
             )
             return response.ok
         except requests.RequestException:
