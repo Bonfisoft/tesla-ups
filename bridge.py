@@ -82,7 +82,7 @@ async def lifespan(_fastapi_app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-STATUS_FILE = os.getenv("STATUS_FILE", "/var/lib/nut/ups/powerwall.dev")
+STATUS_FILE = os.getenv("STATUS_FILE", "/var/lib/nut/ups/ups.dev")
 BATTERY_WARNING = float(os.getenv("BATTERY_WARNING", "30.0"))  # Warning level (%)
 BATTERY_THRESHOLD = float(os.getenv("BATTERY_THRESHOLD", "15.0"))  # Critical/shutdown level (%)
 

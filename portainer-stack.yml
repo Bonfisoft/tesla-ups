@@ -17,6 +17,9 @@ services:
       - "PW_PASSWORD=${PW_PASSWORD}"
     ports:
       - "${PW_PORT:-8675}:8675"
+    dns:
+      - 192.168.1.1
+      - 8.8.8.8
 
   # nut-upsd is OPTIONAL - only needed for REPORTING_MODE=upsd
   # For REPORTING_MODE=nut (default), the bridge provides native NUT protocol
@@ -51,6 +54,9 @@ services:
       # Reporting Mode: nut (default), snmp, or upsd
       - "REPORTING_MODE=${REPORTING_MODE:-nut}"
       - "NUT_SERVER_PORT=${NUT_SERVER_PORT:-3493}"
+      - "NUT_UPS_NAME=${NUT_UPS_NAME:-ups}"
+      - "NUT_USERNAME=${NUT_USERNAME:-monuser}"
+      - "NUT_PASSWORD=${NUT_PASSWORD:-secret}"
 
       # Multi-Provider Configuration
       # Provider 1 (Main House)
@@ -87,6 +93,56 @@ services:
       - "${BRIDGE_PORT:-8100}:8100"
       # Port 3493 only needed for REPORTING_MODE=nut (native NUT server)
       - "${NUT_PORT:-3493}:3493"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8100/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      pypowerwall:
+        condition: service_started
+
+  # SNMP variant - only started with: docker-compose --profile snmp up
+  powerwall-bridge-snmp:
+    image: darthbert/tesla-ups-bridge:latest
+    container_name: powerwall-bridge
+    restart: always
+    environment:
+      # Reporting Mode: snmp
+      - "REPORTING_MODE=${REPORTING_MODE:-snmp}"
+      - "NUT_SERVER_PORT=${NUT_SERVER_PORT:-3493}"
+      - "NUT_UPS_NAME=${NUT_UPS_NAME:-ups}"
+      - "NUT_USERNAME=${NUT_USERNAME:-monuser}"
+      - "NUT_PASSWORD=${NUT_PASSWORD:-secret}"
+
+      # Multi-Provider Configuration
+      # Provider 1 (Main House)
+      - "PROVIDER_1_TYPE=${PROVIDER_1_TYPE:-powerwall}"
+      - "PROVIDER_1_PROXY_URL=${PROVIDER_1_PROXY_URL:-http://pypowerwall:8675}"
+      - "PROVIDER_1_TIMEOUT=${PROVIDER_1_TIMEOUT:-10}"
+      - "PROVIDER_1_NAME=${PROVIDER_1_NAME:-Main House}"
+
+      # SMTP / Email Notifications
+      - "SMTP_SERVER=${SMTP_SERVER}"
+      - "SMTP_PORT=${SMTP_PORT:-587}"
+      - "EMAIL_USER=${EMAIL_USER}"
+      - "EMAIL_PASS=${EMAIL_PASS}"
+      - "NOTIFY_TO=${NOTIFY_TO}"
+
+      # Internationalization
+      - "DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-en}"
+
+      # Optional: Polling interval in seconds (default: 15)
+      - "POLL_INTERVAL=${POLL_INTERVAL:-15}"
+
+      # SNMP Settings for Synology DSM UPS monitoring
+      - "SNMP_COMMUNITY=${SNMP_COMMUNITY:-public}"
+      - "SNMP_PORT=${SNMP_PORT:-1161}"
+    volumes:
+      - ups_status:/var/lib/nut/ups
+    ports:
+      - "${BRIDGE_PORT:-8100}:8100"
       # Port 1161 only needed for REPORTING_MODE=snmp or upsd
       - "${SNMP_PORT:-1161}:${SNMP_PORT:-1161}/udp"
     healthcheck:
@@ -98,6 +154,8 @@ services:
     depends_on:
       pypowerwall:
         condition: service_started
+    profiles:
+      - snmp
 
 volumes:
   ups_status:

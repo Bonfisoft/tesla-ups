@@ -45,6 +45,9 @@ services:
     environment:
       - REPORTING_MODE=${REPORTING_MODE:-nut}
       - NUT_SERVER_PORT=3493
+      - NUT_UPS_NAME=${NUT_UPS_NAME:-ups}
+      - NUT_USERNAME=${NUT_USERNAME:-monuser}
+      - NUT_PASSWORD=${NUT_PASSWORD:-secret}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/status"]
       interval: 30s

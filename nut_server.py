@@ -8,6 +8,7 @@ Reference: https://networkupstools.org/docs/developer-guide.chunked/ap01.html
 """
 
 import logging
+import os
 import socketserver
 import threading
 from typing import Dict, Any
@@ -21,8 +22,10 @@ class NUTProtocolHandler(socketserver.StreamRequestHandler):
     # Protocol constants
     PROTOCOL_VERSION = "1.2"
     SERVER_VERSION = "Tesla-UPS-Bridge 1.0"
-    UPS_NAME = "powerwall"
+    UPS_NAME = os.getenv("NUT_UPS_NAME", "ups")
     UPS_DESC = "Tesla Powerwall via Bridge"
+    AUTH_USERNAME = os.getenv("NUT_USERNAME", "monuser")
+    AUTH_PASSWORD = os.getenv("NUT_PASSWORD", "secret")
 
     def handle(self):
         """Handle client connection."""
@@ -216,7 +219,7 @@ class NUTProtocolHandler(socketserver.StreamRequestHandler):
             self._send_response("ERR UNKNOWN-UPS\n")
 
     def _cmd_login(self, args):
-        """LOGIN <upsname> [username] - Authenticate (optional, accepts any)."""
+        """LOGIN <upsname> [username] [password] - Authenticate with credentials."""
         if len(args) < 1:
             self._send_response("ERR UNKNOWN\n")
             return
@@ -226,8 +229,17 @@ class NUTProtocolHandler(socketserver.StreamRequestHandler):
             self._send_response("ERR UNKNOWN-UPS\n")
             return
 
-        # Accept any login (no authentication required for read-only)
+        # Check credentials if provided
+        if len(args) >= 2:
+            username = args[1]
+            password = args[2] if len(args) >= 3 else ""
+            if username != self.AUTH_USERNAME or password != self.AUTH_PASSWORD:
+                self._send_response("ERR ACCESS-DENIED\n")
+                logger.warning("Failed login attempt for user: %s", username)
+                return
+
         self._send_response("OK\n")
+        logger.info("Successful login for user: %s", args[1] if len(args) >= 2 else "anonymous")
 
     def _cmd_logout(self, args):
         """LOGOUT - End session."""

@@ -130,6 +130,14 @@ All service ports can be customized via environment variables:
 - `SNMP_PORT` - SNMP agent port for Synology DSM (default: `1161`, use 161 only if host SNMP is disabled)
 - `NUT_SERVER_PORT` - Native NUT protocol server port (default: `3493`, used when `REPORTING_MODE=nut`)
 
+### NUT Server Configuration
+
+When using `REPORTING_MODE=nut` (native NUT protocol), these environment variables configure the NUT server:
+
+- `NUT_UPS_NAME` - UPS device name (default: `ups`). Some NUT clients (e.g., Synology DSM) require specific names like `ups`.
+- `NUT_USERNAME` - NUT authentication username (default: `monuser`)
+- `NUT_PASSWORD` - NUT authentication password (default: `secret`)
+
 Example using custom ports:
 
 ```bash
@@ -457,14 +465,14 @@ pytest -m integration
   # In another terminal, test with netcat:
   echo -e "VER\n" | nc localhost 3493
   echo -e "LIST UPS\n" | nc localhost 3493
-  echo -e "LIST VAR powerwall\n" | nc localhost 3493
-  echo -e "GET VAR powerwall ups.status\n" | nc localhost 3493
-  echo -e "GET VAR powerwall battery.charge\n" | nc localhost 3493
+  echo -e "LIST VAR ups\n" | nc localhost 3493
+  echo -e "GET VAR ups ups.status\n" | nc localhost 3493
+  echo -e "GET VAR ups battery.charge\n" | nc localhost 3493
 
   # Expected responses:
   # VER: "Tesla-UPS-Bridge 1.0"
-  # LIST UPS: "UPS powerwall"
-  # GET VAR: "VAR powerwall ups.status OL" or "OB"
+  # LIST UPS: "UPS ups"
+  # GET VAR: "VAR ups ups.status OL" or "OB"
   ```
 
 - **Step 3: Test with real NUT client (`upsc`)**
@@ -476,9 +484,9 @@ pytest -m integration
   # Arch: sudo pacman -S nut
 
   # Query the native NUT server
-  upsc powerwall@localhost:3493
-  upsc powerwall@localhost:3493 ups.status
-  upsc powerwall@localhost:3493 battery.charge
+  upsc ups@localhost:3493
+  upsc ups@localhost:3493 ups.status
+  upsc ups@localhost:3493 battery.charge
 
   # Expected output: Current UPS status and battery percentage
   ```
@@ -506,7 +514,7 @@ pytest -m integration
   REPORTING_MODE=upsd python bridge.py
 
   # Check that NUT status file is being written
-  cat /var/lib/nut/ups/powerwall.dev
+  cat /var/lib/nut/ups/ups.dev
 
   # Expected output:
   # ups.status: OL
@@ -574,8 +582,8 @@ pytest -m integration
   ps aux | grep nut_snmp_agent.py
 
   # Clean up test files if needed
-  rm -f /var/lib/nut/ups/powerwall.dev
-  rm -f /var/lib/nut/ups/powerwall.dev.tmp
+  rm -f /var/lib/nut/ups/ups.dev
+  rm -f /var/lib/nut/ups/ups.dev.tmp
   ```
 
 ### What the tests cover
@@ -611,9 +619,9 @@ Create these files on your host for the NUT container:
 **`nut-config/ups.conf`:**
 
 ```ini
-[powerwall]
+[ups]
     driver = dummy-ups
-    port = /var/lib/nut/ups/powerwall.dev
+    port = /var/lib/nut/ups/ups.dev
     mode = dummy-once
     desc = "Tesla Powerwall via Bridge"
 ```
@@ -647,7 +655,7 @@ nut-upsd:
     - ./nut-config:/etc/nut
     - ups_status:/var/lib/nut/ups
   environment:
-    - UPS_NAME=powerwall
+    - UPS_NAME=ups
     - UPS_DRIVER=dummy-ups
   ports:
     - "3493:3493"
@@ -668,10 +676,10 @@ nut-upsd:
 | Feature | `nut-upsd` Container | Native NUT Server (`REPORTING_MODE=nut`) |
 | --------- | --------------------- | ------------------------------------------ |
 | **NUT Protocol** | Full implementation | Core commands only (VER, LIST, GET) |
-| **Client auth** | Username/password | Anonymous (read-only) |
+| **Client auth** | Username/password | Username/password (monuser/secret) |
 | **SSL/TLS** | Supported | Not yet implemented |
 | **Event scripts** | `upssched`, `upsmon` actions | Not yet implemented |
-| **Multiple UPS** | Supported | Single UPS (powerwall) |
+| **Multiple UPS** | Supported | Single UPS (ups) |
 | **Resource usage** | Extra container | Built into bridge |
 | **Configuration** | NUT config files | Environment variables |
 
@@ -695,14 +703,14 @@ The bridge now includes a native NUT protocol server. This eliminates the need f
 - `LIST VAR <ups>` - List all variables
 - `GET VAR <ups> <var>` - Get specific variable (e.g., `ups.status`, `battery.charge`)
 - `GET UPSDESC <ups>` - Get UPS description
-- `LOGIN <ups>` - Authenticate (accepts any, read-only access)
+- `LOGIN <ups> <username> <password>` - Authenticate (username: `monuser`, password: `secret`)
 
 **Example:**
 
 ```bash
 # Query UPS status directly from bridge
-upsc powerwall@localhost:3493 ups.status
-upsc powerwall@localhost:3493 battery.charge
+upsc ups@localhost:3493 ups.status
+upsc ups@localhost:3493 battery.charge
 ```
 
 **Migration from NUT container to native protocol:**
