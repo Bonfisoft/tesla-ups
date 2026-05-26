@@ -92,7 +92,9 @@ class NUTProtocolHandler(socketserver.StreamRequestHandler):
     def _get_state(self) -> Dict[str, Any]:
         """Get current UPS state from bridge module."""
         # Import here to avoid circular dependency at module load
+        # Python caches imports, so we'll get the same module reference
         import bridge
+
         status = bridge.state.get('status', 'OL')
         soe = bridge.state.get('soe', 100.0)
 
